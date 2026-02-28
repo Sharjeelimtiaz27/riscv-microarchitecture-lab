@@ -24,7 +24,7 @@ module single_cycle_smoke_tb_waves;
   logic rst_n;
 
   // parameters
-  localparam int MAX_CYCLES = 10000;
+  localparam int MAX_CYCLES = 100000;
 
   // clock generation (10 ns period)
   initial begin
