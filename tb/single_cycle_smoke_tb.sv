@@ -31,7 +31,7 @@ module single_cycle_smoke_tb;
 
   // DUT
   single_cycle_top #(
-    .IMEM_INIT("rtl/common/programs/prog1.hex")
+    .IMEM_INIT("/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/programs/prog1.hex")
   ) dut (
     .clk(clk),
     .rst_n(rst_n)
