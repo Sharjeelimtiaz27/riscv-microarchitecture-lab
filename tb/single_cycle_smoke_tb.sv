@@ -30,7 +30,7 @@ module single_cycle_smoke_tb;
   end
 
   // instantiate DUT with small program (prog1.hex)
-  single_cycle_top #(.IMEM_INIT("rtl/common/programs/prog1.hex")) dut (.clk(clk), .rst_n(rst_n));
+  single_cycle_top #(.IMEM_INIT("/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/programs/prog1.hex")) dut (.clk(clk), .rst_n(rst_n));
 
   // =============================
   // Explicit debug signals
