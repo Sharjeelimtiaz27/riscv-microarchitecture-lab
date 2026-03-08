@@ -8,7 +8,7 @@
 
 A public research and teaching lab for designing, verifying, and formally reasoning about RISC-V microarchitectures.
 
-This repository documents the complete CPU development workflow — from RTL design through functional verification to formal proof.
+This repository documents the complete CPU development workflow from RTL design through functional verification to formal proof.
 
 ---
 
@@ -75,7 +75,7 @@ Formal verification goals include proving:
 
 ---
 
-## CPU Architecture — Single Cycle
+## CPU Architecture  Single Cycle
 
 ```
           +--------------------+
@@ -239,26 +239,26 @@ riscv-microarchitecture-lab/
 
 ## Development Roadmap
 
-**Phase 1 — Single Cycle CPU**
+**Phase 1  Single Cycle CPU**
 - RV32I instruction support
 - Modular RTL architecture
 - Smoke tests and waveform validation
 
-**Phase 2 — Functional Verification**
+**Phase 2  Functional Verification**
 - cocotb testbench
 - pyuvm verification environment
 - Driver / Monitor / Scoreboard architecture
 
-**Phase 3 — Assertions**
+**Phase 3  Assertions**
 - SystemVerilog Assertions per RTL module
 - Simulation-based property checking
 
-**Phase 4 — Formal Verification**
+**Phase 4  Formal Verification**
 - JasperGold harness
 - Microarchitectural invariants
 - Corner-case detection and exploration
 
-**Phase 5 — Pipelined CPU**
+**Phase 5  Pipelined CPU**
 - 5-stage pipeline
 - Hazard detection
 - Forwarding logic
@@ -308,7 +308,7 @@ Each development week includes learning notes, architecture diagrams, command fl
 
 ## License
 
-MIT License — free to use, modify, and share.
+MIT License  free to use, modify, and share.
 
 ---
 
