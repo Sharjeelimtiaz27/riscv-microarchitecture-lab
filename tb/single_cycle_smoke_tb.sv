@@ -29,13 +29,8 @@ module single_cycle_smoke_tb;
     forever #5 clk = ~clk;
   end
 
-  // DUT
-  single_cycle_top #(
-    .IMEM_INIT("rtl/common/programs/prog1.hex")
-  ) dut (
-    .clk(clk),
-    .rst_n(rst_n)
-  );
+  // instantiate DUT with small program (prog1.hex)
+  single_cycle_top #(.IMEM_INIT("rtl/common/programs/prog1.hex")) dut (.clk(clk), .rst_n(rst_n));
 
   // =============================
   // Explicit debug signals

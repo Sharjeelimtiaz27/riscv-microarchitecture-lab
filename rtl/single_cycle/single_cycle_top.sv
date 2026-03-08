@@ -33,7 +33,7 @@ Notes        :
 // rtl/single_cycle/single_cycle_top.sv
 `timescale 1ns/1ps
 module single_cycle_top #(
-  parameter IMEM_INIT = "rtl/common/programs/prog1.hex"
+  parameter IMEM_INIT = "/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/programs/prog1.hex"
 )(
   input  logic        clk,
   input  logic        rst_n
