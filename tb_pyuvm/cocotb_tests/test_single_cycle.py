@@ -61,7 +61,7 @@ async def run_pyuvm_smoke(dut):
 
     # Release reset — the processor starts fetching from PC=0x0.
     dut.rst_n.value = 1
-    cocotb.log.info("TEST  reset released — processor running")
+    cocotb.log.info("TEST  reset released - processor running")
 
     # Wait 128 cycles: 32 instructions x 1 cycle each plus margin.
     # The scoreboard performs its check internally after 64 cycles.
@@ -77,4 +77,4 @@ async def run_pyuvm_smoke(dut):
             f"x3={monitor.last_regs[3]}"
         )
     else:
-        assert False, "TEST  SMOKE FAIL — see SCOREBOARD lines above for detail"
+        assert False, "TEST  SMOKE FAIL - see SCOREBOARD lines above for detail"

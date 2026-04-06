@@ -137,6 +137,6 @@ class SingleCycleScoreboard(uvm_component):
         self.passed = all_pass
 
         if all_pass:
-            cocotb.log.info("SCOREBOARD  SMOKE PASS — all registers correct")
+            cocotb.log.info("SCOREBOARD  SMOKE PASS - all registers correct")
         else:
-            cocotb.log.error("SCOREBOARD  SMOKE FAIL — one or more registers wrong")
+            cocotb.log.error("SCOREBOARD  SMOKE FAIL - one or more registers wrong")

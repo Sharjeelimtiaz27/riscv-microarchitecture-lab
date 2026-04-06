@@ -35,22 +35,23 @@ Notes        :
 module alu (
   input  logic [31:0] a,
   input  logic [31:0] b,
-  input  logic [3:0]  alu_op,   // 0:ADD,1:SUB,2:AND,3:OR,4:XOR,5:SLT,6:SLL,7:SRL,8:SRA
+  input  logic [3:0]  alu_op,   // 0:ADD 1:SUB 2:AND 3:OR 4:XOR 5:SLT 6:SLL 7:SRL 8:SRA 9:SLTU
   output logic [31:0] result,
   output logic        zero
 );
   always_comb begin
     unique case (alu_op)
-      4'd0: result = a + b;            // ADD
-      4'd1: result = a - b;            // SUB
-      4'd2: result = a & b;            // AND
-      4'd3: result = a | b;            // OR
-      4'd4: result = a ^ b;            // XOR
-      4'd5: result = ($signed(a) < $signed(b)) ? 32'd1 : 32'd0; // SLT
-      4'd6: result = a << b[4:0];      // SLL
-      4'd7: result = a >> b[4:0];      // SRL logical
-      4'd8: result = $signed(a) >>> b[4:0]; // SRA arithmetic
-      default: result = 32'h00000000;  // safe default
+      4'd0: result = a + b;                                              // ADD / ADDI
+      4'd1: result = a - b;                                              // SUB
+      4'd2: result = a & b;                                              // AND / ANDI
+      4'd3: result = a | b;                                              // OR  / ORI
+      4'd4: result = a ^ b;                                              // XOR / XORI
+      4'd5: result = ($signed(a) < $signed(b))   ? 32'd1 : 32'd0;       // SLT / SLTI
+      4'd6: result = a << b[4:0];                                        // SLL / SLLI
+      4'd7: result = a >> b[4:0];                                        // SRL / SRLI
+      4'd8: result = $signed(a) >>> b[4:0];                              // SRA / SRAI
+      4'd9: result = (a < b)                     ? 32'd1 : 32'd0;       // SLTU / SLTIU
+      default: result = 32'h00000000;
     endcase
   end
 
