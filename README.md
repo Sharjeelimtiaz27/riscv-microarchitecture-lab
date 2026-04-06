@@ -5,16 +5,18 @@
 ![Verification](https://img.shields.io/badge/Verification-cocotb%20%7C%20pyuvm-green)
 ![Formal](https://img.shields.io/badge/Formal-JasperGold-red)
 ![Simulator](https://img.shields.io/badge/Simulator-Xcelium%20%7C%20Questa-blueviolet)
+![Synthesis](https://img.shields.io/badge/Synthesis-Cadence%20Genus-yellow)
+![PnR](https://img.shields.io/badge/Place%20%26%20Route-Cadence%20Innovus-9cf)
 
-A public research and teaching lab for designing, verifying, and formally reasoning about RISC-V microarchitectures.
+A public research and teaching lab for designing, verifying, and formally reasoning about RISC-V microarchitectures — from specification all the way to physical chip implementation.
 
-This repository documents the complete CPU development workflow from RTL design through functional verification to formal proof.
+This repository documents the complete CPU development workflow: RTL design, functional verification, assertion-based verification, formal proof, logic synthesis, and place-and-route.
 
 ---
 
 ## Project Goals
 
-This project demonstrates the complete CPU development stack used in industry.
+This project demonstrates the complete CPU development stack used in industry, from first RTL to a fabrication-ready chip.
 
 Main focus areas:
 
@@ -22,7 +24,10 @@ Main focus areas:
 - Functional verification using cocotb and pyuvm
 - Assertion-based verification using SystemVerilog Assertions (SVA)
 - Formal verification using Cadence JasperGold
-- Microarchitectural reasoning and security properties
+- Security verification: microarchitectural invariants and logic locking
+- Logic synthesis using Cadence Genus
+- Place-and-route using Cadence Innovus
+- Physical chip implementation as the final deliverable
 - Weekly research notebooks documenting learning progress
 
 ---
@@ -71,7 +76,16 @@ Formal verification goals include proving:
 - Correct instruction commit ordering
 - Memory access safety
 - Control-path correctness
-- Security invariants
+- Security invariants (information flow, privilege isolation)
+
+### Logic Synthesis and Physical Implementation
+
+| Tool | Purpose |
+|------|---------|
+| Cadence Genus | Logic synthesis: RTL to gate-level netlist, area and timing reports |
+| Cadence Innovus | Place-and-route: floorplanning, routing, timing closure, GDSII output |
+
+The final goal of this project is a fully placed-and-routed chip. Every phase of design and verification feeds toward a fabrication-ready implementation.
 
 ---
 
@@ -212,6 +226,9 @@ riscv-microarchitecture-lab/
 │   └── assertions/
 ├── tb/
 ├── tb_pyuvm/
+├── formal/
+├── syn/
+├── pnr/
 ├── simulation_results/
 ├── tools/
 │   └── scripts/
@@ -228,41 +245,58 @@ riscv-microarchitecture-lab/
 | `docs/weekly_notebooks/` | Week-by-week learning and research journal |
 | `rtl/common/` | Shared RTL modules (ALU, regfile, PC, etc.) |
 | `rtl/single_cycle/` | Single-cycle RV32I CPU implementation |
-| `rtl/pipeline/` | Future pipelined RV32IMC CPU |
+| `rtl/pipeline/` | Pipelined RV64IM CPU (Phase 2+) |
 | `rtl/assertions/` | SystemVerilog Assertions |
 | `tb/` | Basic simulation testbenches |
-| `tb_pyuvm/` | Python-based verification environment |
+| `tb_pyuvm/` | Python-based pyuvm verification environment |
+| `formal/` | JasperGold TCL scripts and formal results |
+| `syn/` | Genus synthesis scripts and area/timing reports |
+| `pnr/` | Innovus place-and-route scripts and GDSII output |
 | `simulation_results/` | Waveforms and test output logs |
-| `tools/scripts/` | Simulation helper scripts |
+| `tools/scripts/` | Simulation and flow helper scripts |
 
 ---
 
 ## Development Roadmap
 
-**Phase 1  Single Cycle CPU**
-- RV32I instruction support
-- Modular RTL architecture
-- Smoke tests and waveform validation
+**Phase 0  Single-Cycle RV32I  [DONE]**
+- Modular RTL: ALU, register file, PC, immediate generator, memories, top-level
+- Smoke test passing: x1=5, x2=7, x3=12
 
-**Phase 2  Functional Verification**
-- cocotb testbench
-- pyuvm verification environment
+**Phase 1  Verification of Single-Cycle CPU  [ACTIVE]**
+- cocotb + pyuvm functional verification environment
 - Driver / Monitor / Scoreboard architecture
+- SystemVerilog Assertions (SVA) per module
+- Formal proof of microarchitectural invariants with JasperGold
+- Security properties: x0 immutability, privilege isolation, information flow
+- Logic synthesis with Genus (area and timing reports)
+- Place-and-route with Innovus (floorplan, routing, GDSII)
 
-**Phase 3  Assertions**
-- SystemVerilog Assertions per RTL module
-- Simulation-based property checking
+**Phase 2  RV64IM 5-Stage Pipelined CPU**
+- 64-bit datapath
+- 5-stage pipeline: IF / ID / EX / MEM / WB
+- Hazard detection and forwarding unit
+- Out-of-order execution (ROB, reservation stations, register renaming)
 
-**Phase 4  Formal Verification**
-- JasperGold harness
-- Microarchitectural invariants
-- Corner-case detection and exploration
+**Phase 3  Privilege Levels and OS Support**
+- Machine / Supervisor / User privilege levels per RISC-V specification
+- Full CSR file with trap and interrupt handling
+- SV39 virtual memory / MMU
+- Capable of booting a small Linux kernel
+- Optional: FPGA port for Linux boot testing
 
-**Phase 5  Pipelined CPU**
-- 5-stage pipeline
-- Hazard detection
-- Forwarding logic
-- RV32IMC support
+**Phase 4  Security Variant**
+- Logic locking: configurable normal / secure mode
+- Formal security verification of the locked variant
+
+**Phase 5  Open Peripheral Interface**
+- UART baseline peripheral
+- Open interface for community-contributed peripherals: AI accelerators, crypto cores, and more
+
+**Phase 6  Physical Chip  (Final Goal)**
+- Full Genus synthesis of the complete processor
+- Innovus place-and-route with timing closure
+- Fabrication-ready GDSII output
 
 ---
 
@@ -296,13 +330,28 @@ SMOKE PASS
 
 This repository is designed to help engineers learn:
 
-- CPU microarchitecture design
+- CPU microarchitecture design from specification
 - Modern verification workflows and methodology
-- Python-based UVM methodology
-- Formal verification thinking
-- Hardware security reasoning
+- Python-based UVM methodology with cocotb and pyuvm
+- Formal verification thinking with JasperGold
+- Hardware security reasoning and logic locking
+- Logic synthesis with Cadence Genus
+- Physical implementation with Cadence Innovus
 
 Each development week includes learning notes, architecture diagrams, command flow documentation, and Q&A explanations.
+
+---
+
+## Open for Contributions
+
+This processor is designed to be extended. Once the core is stable, the peripheral interface will be open for community contributions including:
+
+- UART and other standard peripherals
+- AI accelerators
+- Cryptographic cores
+- Custom instruction extensions
+
+If you want to add a peripheral or extension, open an issue or pull request.
 
 ---
 
