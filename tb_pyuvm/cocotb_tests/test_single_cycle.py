@@ -45,7 +45,7 @@ async def run_pyuvm_smoke(dut):
     # -------------------------------------------------------------------------
     # 1. Start the clock (10 ns period = 100 MHz).
     # -------------------------------------------------------------------------
-    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    cocotb.start_soon(Clock(dut.clk, 10, unit="ns").start())
 
     # -------------------------------------------------------------------------
     # 2. Assert reset. DUT is held in reset while IMEM is being loaded.
@@ -53,7 +53,7 @@ async def run_pyuvm_smoke(dut):
     #    before the driver has finished writing the program.
     # -------------------------------------------------------------------------
     dut.rst_n.value = 0
-    await Timer(20, units="ns")     # hold reset for two full clock periods
+    await Timer(20, unit="ns")      # hold reset for two full clock periods
 
     # -------------------------------------------------------------------------
     # 3. Build and connect the UVM environment.

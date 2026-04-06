@@ -43,7 +43,7 @@ module regfile (
   output logic [31:0]  rd1,
   output logic [31:0]  rd2
 );
-  logic [31:0] regs [31];
+  logic [31:0] regs [32];   // 32 registers: x0 through x31
 
   // Reads are combinational (architectural semantics: x0 reads 0)
   assign rd1 = (rs1 == 5'd0) ? 32'd0 : regs[rs1];
