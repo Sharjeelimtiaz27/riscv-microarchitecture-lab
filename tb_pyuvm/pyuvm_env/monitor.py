@@ -18,41 +18,39 @@
 
 from pyuvm import uvm_component
 from cocotb.triggers import RisingEdge
+from .coverage import CoverageCollector
 import cocotb
 
 
 class SingleCycleMonitor(uvm_component):
     """
     Samples the DUT register file, PC, and current instruction on every
-    rising clock edge and forwards each snapshot to the scoreboard.
-    The monitor never writes to any DUT signal — it is strictly passive.
+    rising clock edge. Forwards each snapshot to the scoreboard for
+    correctness checking and to the coverage collector for functional
+    coverage tracking. The monitor never writes to any DUT signal.
     """
 
     def __init__(self, name, parent, dut):
         super().__init__(name, parent)
         self.dut        = dut
-        self.scoreboard = None          # assigned by env during connect_phase
-        self.last_regs  = [0] * 32     # latest register file snapshot
-        self.last_pc    = 0            # latest PC value
-        self.last_instr = 0            # latest instruction word
+        self.scoreboard = None              # assigned by env during connect_phase
+        self.coverage   = CoverageCollector()
+        self.last_regs  = [0] * 32
+        self.last_pc    = 0
+        self.last_instr = 0
 
     async def run_phase(self, phase):
         """
         Passive sampling loop. Runs for the duration of the simulation.
         On each rising edge, captures register file, PC, and instruction
-        word, logs a brief summary, and forwards the snapshot to the
-        scoreboard.
+        word, then forwards to the scoreboard and coverage collector.
         """
         while True:
             await RisingEdge(self.dut.clk)
 
-            # Sample the full 32-entry register file.
-            # x0 is hardwired to zero in hardware; the read will always
-            # return 0 for index 0, but we sample it for completeness.
             for i in range(32):
                 self.last_regs[i] = int(self.dut.rf.regs[i].value)
 
-            # Sample PC and current instruction word.
             self.last_pc    = int(self.dut.pc.value)
             self.last_instr = int(self.dut.instr.value)
 
@@ -64,10 +62,13 @@ class SingleCycleMonitor(uvm_component):
                 f"x3={self.last_regs[3]}"
             )
 
-            # Forward the full snapshot to the scoreboard.
+            # Forward snapshot to scoreboard for correctness checking.
             if self.scoreboard is not None:
                 self.scoreboard.sample(
-                    regs    = self.last_regs,
-                    pc      = self.last_pc,
-                    instr   = self.last_instr,
+                    regs  = self.last_regs,
+                    pc    = self.last_pc,
+                    instr = self.last_instr,
                 )
+
+            # Sample current instruction into the coverage collector.
+            self.coverage.sample(self.last_instr)

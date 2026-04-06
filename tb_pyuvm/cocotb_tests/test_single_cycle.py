@@ -68,6 +68,9 @@ async def run_pyuvm_smoke(dut):
     for _ in range(128):
         await RisingEdge(dut.clk)
 
+    # Print the functional coverage report regardless of pass/fail.
+    monitor.coverage.report()
+
     # Read the scoreboard result.
     if scoreboard.passed:
         cocotb.log.info(
