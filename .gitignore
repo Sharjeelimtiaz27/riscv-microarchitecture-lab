@@ -1,0 +1,21 @@
+# Claude Code session files — local only, not for version control
+CLAUDE.md
+napkin.md
+
+# Simulation artifacts
+xcelium.d/
+work/
+artifacts/
+waves.vcd
+*.vcd
+*.shm/
+*.diag
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
