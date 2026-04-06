@@ -107,9 +107,7 @@ async def run_pyuvm_smoke(dut):
             f"x3={env.agent.monitor.last_regs[3]}"
         )
     else:
-        raise cocotb.result.TestFailure(
-            "TEST  SMOKE FAIL — see SCOREBOARD lines above for detail"
-        )
+        assert False, "TEST  SMOKE FAIL — see SCOREBOARD lines above for detail"
 
     # Cancel background tasks cleanly.
     driver_task.cancel()

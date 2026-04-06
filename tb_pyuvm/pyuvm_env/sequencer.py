@@ -13,8 +13,8 @@
 # call into driver directly in our simple flow.
 ###############################################################################
 
-from pyuvm import *
+from pyuvm import uvm_sequencer
 
-class SingleCycleSequencer(UVMSequencer):
+class SingleCycleSequencer(uvm_sequencer):
     def __init__(self, name, parent):
         super().__init__(name, parent)

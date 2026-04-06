@@ -40,7 +40,7 @@
 #   x30 = 64       ADDI x30, x0, 64
 ###############################################################################
 
-from pyuvm import UVMComponent
+from pyuvm import uvm_component
 import cocotb
 
 
@@ -75,7 +75,7 @@ EXPECTED_REGS = {
 CHECK_AFTER_CYCLES = 64
 
 
-class SingleCycleScoreboard(UVMComponent):
+class SingleCycleScoreboard(uvm_component):
     """
     Compares DUT register file against the golden reference after the program
     has had enough cycles to complete. Tracks cycle count internally and

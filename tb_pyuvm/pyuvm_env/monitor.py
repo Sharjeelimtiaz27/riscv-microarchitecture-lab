@@ -16,12 +16,12 @@
 # being executed, giving the scoreboard full visibility into DUT state.
 ###############################################################################
 
-from pyuvm import UVMComponent
+from pyuvm import uvm_component
 from cocotb.triggers import RisingEdge
 import cocotb
 
 
-class SingleCycleMonitor(UVMComponent):
+class SingleCycleMonitor(uvm_component):
     """
     Samples the DUT register file, PC, and current instruction on every
     rising clock edge and forwards each snapshot to the scoreboard.

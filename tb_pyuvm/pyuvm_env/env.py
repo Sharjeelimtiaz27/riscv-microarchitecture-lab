@@ -28,7 +28,7 @@
 #   monitor.scoreboard <- scoreboard     (monitor pushes snapshots to scoreboard)
 ###############################################################################
 
-from pyuvm import UVMEnv, UVMComponent
+from pyuvm import uvm_env, uvm_component
 
 from .driver     import SingleCycleDriver
 from .monitor    import SingleCycleMonitor
@@ -36,7 +36,7 @@ from .scoreboard import SingleCycleScoreboard
 from .sequencer  import SingleCycleSequencer
 
 
-class Agent(UVMComponent):
+class Agent(uvm_component):
     """
     Groups the active verification components: sequencer, driver, and monitor.
     The agent is the standard UVM packaging unit for one interface — in this
@@ -61,7 +61,7 @@ class Agent(UVMComponent):
         self.driver.seqr = self.seqr
 
 
-class SingleCycleEnv(UVMEnv):
+class SingleCycleEnv(uvm_env):
     """
     Top-level verification environment. Owns the agent and the scoreboard.
     Responsible for constructing, connecting, and starting all components.

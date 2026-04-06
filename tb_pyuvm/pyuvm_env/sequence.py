@@ -20,7 +20,7 @@
 ###############################################################################
 
 import os
-from pyuvm import UVMSequenceItem, UVMSequence
+from pyuvm import uvm_sequence_item, uvm_sequence
 
 
 # Default path to the smoke test program, relative to this file's location.
@@ -31,7 +31,7 @@ _DEFAULT_HEX = os.path.join(
 )
 
 
-class RVInstrItem(UVMSequenceItem):
+class RVInstrItem(uvm_sequence_item):
     """
     One transaction: a single 32-bit RV32I instruction word and the IMEM
     word address it should occupy. Word address 0 maps to PC=0x0, word
@@ -45,7 +45,7 @@ class RVInstrItem(UVMSequenceItem):
         self.instr_word = 0    # 32-bit instruction encoding
 
 
-class ProgramSequence(UVMSequence):
+class ProgramSequence(uvm_sequence):
     """
     Loads a complete RV32I program from a hex file into the DUT instruction
     memory. Each line of the hex file is one 32-bit instruction word in

@@ -17,12 +17,12 @@
 # that the processor fetches correct instructions from the first clock edge.
 ###############################################################################
 
-from pyuvm import UVMComponent
+from pyuvm import uvm_component
 from cocotb.triggers import RisingEdge
 import cocotb
 
 
-class SingleCycleDriver(UVMComponent):
+class SingleCycleDriver(uvm_component):
     """
     Receives RVInstrItem transactions from the sequencer and writes each
     instruction word into the DUT instruction memory. Uses cocotb
