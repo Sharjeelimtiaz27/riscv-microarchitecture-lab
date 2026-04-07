@@ -1,0 +1,30 @@
+xrun(64): 24.03-s004: (c) Copyright 1995-2024 Cadence Design Systems, Inc.
+TOOL:	xrun(64)	24.03-s004: Started on Apr 07, 2026 at 13:35:18 EEST
+/eda/cadence/2024-25/RHELx86/XCELIUM_24.03.004/tools/bin/64bit/xrun
+	-timescale 1ns/1ps
+	-vhdl_time_precision 1ps
+	-access +rwc
+	-sv
+	-licqueue
+	-64
+	-xmlibdirpath sim_build
+	-plinowarn
+	-top single_cycle_top
+	-loadvpi /home/sharjeel/miniconda3/lib/python3.13/site-packages/cocotb/libs/libcocotbvpi_ius.so:vlog_startup_routines_bootstrap
+	-access +rwc
+	-createdebugdb
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/alu.sv
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/alu_ctrl.sv
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/regfile.sv
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/pc.sv
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/immgen.sv
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/inst_memory.sv
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/data_memory.sv
+	/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/single_cycle/single_cycle_top.sv
+Loading snapshot worklib.single_cycle_top:sv .................... Done
+xcelium> source /eda/cadence/2024-25/RHELx86/XCELIUM_24.03.004/tools/xcelium/files/xmsimrc
+xcelium> run
+IMEM: reading /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/programs/prog1.hex
+Simulation complete via $finish(1) at time 1290 NS + 2
+xcelium> exit
+TOOL:	xrun(64)	24.03-s004: Exiting on Apr 07, 2026 at 13:35:19 EEST  (total: 00:00:01)

@@ -1,0 +1,6 @@
+<testsuites name="results">
+  <testsuite name="all" package="all">
+    <property name="random_seed" value="1775558119" />
+    <testcase name="run_pyuvm_smoke" classname="cocotb_tests.test_single_cycle" file="/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/tb_pyuvm/cocotb_tests/test_single_cycle.py" lineno="38" time="0.04983782768249512" sim_time_ns="1290.0" ratio_time="25883.953213576675" />
+  </testsuite>
+</testsuites>

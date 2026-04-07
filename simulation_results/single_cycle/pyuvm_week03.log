@@ -1,0 +1,245 @@
+rm -f results.xml
+"make" -f Makefile results.xml
+make[1]: Entering directory '/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/tb_pyuvm'
+/home/sharjeel/miniconda3/lib/python3.13/site-packages/cocotb_tools/makefiles/simulators/Makefile.xcelium:96: Using MODULE is deprecated, please use COCOTB_TEST_MODULES instead.
+rm -f results.xml
+# Make sure all libs in SOURCES_VHDL_* are mentioned in VHDL_LIB_ORDER and vice versa
+set -o pipefail; \
+COCOTB_TEST_MODULES=cocotb_tests.test_single_cycle COCOTB_TESTCASE= COCOTB_TEST_FILTER= COCOTB_TOPLEVEL=single_cycle_top GPI_EXTRA= TOPLEVEL_LANG=verilog \
+ /eda/cadence/2024-25/RHELx86/XCELIUM_24.03.004/tools/bin/64bit/xrun -timescale 1ns/1ps \
+-vhdl_time_precision "1ps" \
+-access +rwc -sv  -licqueue -64 -xmlibdirpath sim_build -plinowarn  -top single_cycle_top -loadvpi /home/sharjeel/miniconda3/lib/python3.13/site-packages/cocotb/libs/libcocotbvpi_ius.so:vlog_startup_routines_bootstrap  -access +rwc -createdebugdb   /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/alu.sv /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/alu_ctrl.sv /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/regfile.sv /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/pc.sv /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/immgen.sv /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/inst_memory.sv /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/data_memory.sv /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/single_cycle/single_cycle_top.sv   
+TOOL:	xrun(64)	24.03-s004: Started on Apr 07, 2026 at 15:35:00 EEST
+xrun(64): 24.03-s004: (c) Copyright 1995-2024 Cadence Design Systems, Inc.
+     -.--ns INFO     gpi                                ..mbed/gpi_embed.cpp:93   in _embed_init_python              Using Python 3.13.0rc1 interpreter at /home/sharjeel/miniconda3/bin/python3.13
+     -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       VPI registered
+	Elaborating the design hierarchy:
+		Caching library 'worklib' ....... Done
+	Top level design units:
+		single_cycle_top
+	Building instance overlay tables: .................... Done
+	Building instance specific data structures.
+	Loading native compiled code:     .................... Done
+	Generating Debug Data:
+		LWD Database path: (/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/tb_pyuvm/sim_build/xcelium.d/worklib/single_cycle_top/sv/debug_db/single_cycle_top)
+		Power Aware Instances:                    0
+		Liberty Instances:                        0
+		Out Of Module References:                 0
+		Assertions:                               0
+		Liberty Information:
+			PG Pins:	                  0
+			Liberty Pins:	                  0
+	Design hierarchy summary:
+		                 Instances  Unique
+		Modules:                 8       8
+		Registers:              45      45
+		Scalar wires:            6       -
+		Vectored wires:         50       -
+		Always blocks:           6       6
+		Initial blocks:          3       3
+		Cont. assignments:      11      20
+		Pseudo assignments:     26       -
+		Process Clocks:          3       2
+		Simulation timescale:  1ps
+	Writing initial simulation snapshot: worklib.single_cycle_top:sv
+Loading snapshot worklib.single_cycle_top:sv .................... Done
+     -.--ns INFO     gpi                                ..mbed/gpi_embed.cpp:93   in _embed_init_python              Using Python 3.13.0rc1 interpreter at /home/sharjeel/miniconda3/bin/python3.13
+     -.--ns INFO     gpi                                ../gpi/GpiCommon.cpp:79   in gpi_print_registered_impl       VPI registered
+xcelium> source /eda/cadence/2024-25/RHELx86/XCELIUM_24.03.004/tools/xcelium/files/xmsimrc
+xcelium> run
+     0.00ns INFO     cocotb                             Running on xmsim(64) version 24.03-s004
+     0.00ns INFO     cocotb                             Seeding Python random module with 1775565303
+     0.00ns INFO     cocotb                             Initialized cocotb v2.0.1 from /home/sharjeel/miniconda3/lib/python3.13/site-packages/cocotb
+     0.00ns INFO     cocotb.regression                  pytest not found, install it to enable better AssertionError messages
+     0.00ns INFO     cocotb                             Running tests
+     0.00ns INFO     cocotb.regression                  running cocotb_tests.test_single_cycle.run_pyuvm_smoke (1/1)
+                                                            Single-cycle RV32I smoke test. IMEM is preloaded from prog1.hex by the
+    20.00ns INFO     test                               TEST  reset released - processor running
+    20.00ns INFO     test                               MONITOR  PC=0x00000000  instr=0x00500093  x1=0  x2=0  x3=0
+    30.00ns INFO     test                               MONITOR  PC=0x00000004  instr=0x00700113  x1=5  x2=0  x3=0
+    40.00ns INFO     test                               MONITOR  PC=0x00000008  instr=0x002081B3  x1=5  x2=7  x3=0
+    50.00ns INFO     test                               MONITOR  PC=0x0000000C  instr=0x00118213  x1=5  x2=7  x3=12
+    60.00ns INFO     test                               MONITOR  PC=0x00000010  instr=0x401182B3  x1=5  x2=7  x3=12
+    70.00ns INFO     test                               MONITOR  PC=0x00000014  instr=0x0021F333  x1=5  x2=7  x3=12
+    80.00ns INFO     test                               MONITOR  PC=0x00000018  instr=0x0021E3B3  x1=5  x2=7  x3=12
+    90.00ns INFO     test                               MONITOR  PC=0x0000001C  instr=0x0021C433  x1=5  x2=7  x3=12
+   100.00ns INFO     test                               MONITOR  PC=0x00000020  instr=0x001194B3  x1=5  x2=7  x3=12
+   110.00ns INFO     test                               MONITOR  PC=0x00000024  instr=0x0011D533  x1=5  x2=7  x3=12
+   120.00ns INFO     test                               MONITOR  PC=0x00000028  instr=0x4011D5B3  x1=5  x2=7  x3=12
+   130.00ns INFO     test                               MONITOR  PC=0x0000002C  instr=0x0020A633  x1=5  x2=7  x3=12
+   140.00ns INFO     test                               MONITOR  PC=0x00000030  instr=0x0020B6B3  x1=5  x2=7  x3=12
+   150.00ns INFO     test                               MONITOR  PC=0x00000034  instr=0x0031F713  x1=5  x2=7  x3=12
+   160.00ns INFO     test                               MONITOR  PC=0x00000038  instr=0x0041E793  x1=5  x2=7  x3=12
+   170.00ns INFO     test                               MONITOR  PC=0x0000003C  instr=0x0051C813  x1=5  x2=7  x3=12
+   180.00ns INFO     test                               MONITOR  PC=0x00000040  instr=0x00119893  x1=5  x2=7  x3=12
+   190.00ns INFO     test                               MONITOR  PC=0x00000044  instr=0x0011D913  x1=5  x2=7  x3=12
+   200.00ns INFO     test                               MONITOR  PC=0x00000048  instr=0x4011D993  x1=5  x2=7  x3=12
+   210.00ns INFO     test                               MONITOR  PC=0x0000004C  instr=0x00A0AA13  x1=5  x2=7  x3=12
+   220.00ns INFO     test                               MONITOR  PC=0x00000050  instr=0x00A13A93  x1=5  x2=7  x3=12
+   230.00ns INFO     test                               MONITOR  PC=0x00000054  instr=0x04000F13  x1=5  x2=7  x3=12
+   240.00ns INFO     test                               MONITOR  PC=0x00000058  instr=0x003F2023  x1=5  x2=7  x3=12
+   250.00ns INFO     test                               MONITOR  PC=0x0000005C  instr=0x000F2B03  x1=5  x2=7  x3=12
+   260.00ns INFO     test                               MONITOR  PC=0x00000060  instr=0x00020B93  x1=5  x2=7  x3=12
+   270.00ns INFO     test                               MONITOR  PC=0x00000064  instr=0x00028C13  x1=5  x2=7  x3=12
+   280.00ns INFO     test                               MONITOR  PC=0x00000068  instr=0x00030C93  x1=5  x2=7  x3=12
+   290.00ns INFO     test                               MONITOR  PC=0x0000006C  instr=0x00038D13  x1=5  x2=7  x3=12
+   300.00ns INFO     test                               MONITOR  PC=0x00000070  instr=0x00040D93  x1=5  x2=7  x3=12
+   310.00ns INFO     test                               MONITOR  PC=0x00000074  instr=0x00048E13  x1=5  x2=7  x3=12
+   320.00ns INFO     test                               MONITOR  PC=0x00000078  instr=0x00360E93  x1=5  x2=7  x3=12
+   330.00ns INFO     test                               MONITOR  PC=0x0000007C  instr=0x00868F93  x1=5  x2=7  x3=12
+   340.00ns INFO     test                               MONITOR  PC=0x00000080  instr=0x00001037  x1=5  x2=7  x3=12
+   350.00ns INFO     test                               MONITOR  PC=0x00000084  instr=0x00000017  x1=5  x2=7  x3=12
+   360.00ns INFO     test                               MONITOR  PC=0x00000088  instr=0x00208463  x1=5  x2=7  x3=12
+   370.00ns INFO     test                               MONITOR  PC=0x0000008C  instr=0x00C0006F  x1=5  x2=7  x3=12
+   380.00ns INFO     test                               MONITOR  PC=0x00000090  instr=0x00000013  x1=5  x2=7  x3=12
+   390.00ns INFO     test                               MONITOR  PC=0x00000094  instr=0x00000013  x1=5  x2=7  x3=12
+   400.00ns INFO     test                               MONITOR  PC=0x00000098  instr=0x0A800F13  x1=5  x2=7  x3=12
+   410.00ns INFO     test                               MONITOR  PC=0x0000009C  instr=0x000F0067  x1=5  x2=7  x3=12
+   420.00ns INFO     test                               MONITOR  PC=0x000000A0  instr=0x00000013  x1=5  x2=7  x3=12
+   430.00ns INFO     test                               MONITOR  PC=0x000000A4  instr=0x00000013  x1=5  x2=7  x3=12
+   440.00ns INFO     test                               MONITOR  PC=0x000000A8  instr=0x00050013  x1=5  x2=7  x3=12
+   450.00ns INFO     test                               MONITOR  PC=0x000000AC  instr=0x00058013  x1=5  x2=7  x3=12
+   460.00ns INFO     test                               MONITOR  PC=0x000000B0  instr=0x00070013  x1=5  x2=7  x3=12
+   470.00ns INFO     test                               MONITOR  PC=0x000000B4  instr=0x00078013  x1=5  x2=7  x3=12
+   480.00ns INFO     test                               MONITOR  PC=0x000000B8  instr=0x00080013  x1=5  x2=7  x3=12
+   490.00ns INFO     test                               MONITOR  PC=0x000000BC  instr=0x00088013  x1=5  x2=7  x3=12
+   500.00ns INFO     test                               MONITOR  PC=0x000000C0  instr=0x00090013  x1=5  x2=7  x3=12
+   510.00ns INFO     test                               MONITOR  PC=0x000000C4  instr=0x00098013  x1=5  x2=7  x3=12
+   520.00ns INFO     test                               MONITOR  PC=0x000000C8  instr=0x000A0013  x1=5  x2=7  x3=12
+   530.00ns INFO     test                               MONITOR  PC=0x000000CC  instr=0x000A8013  x1=5  x2=7  x3=12
+   540.00ns INFO     test                               MONITOR  PC=0x000000D0  instr=0x000B0013  x1=5  x2=7  x3=12
+   550.00ns INFO     test                               MONITOR  PC=0x000000D4  instr=0x000B8013  x1=5  x2=7  x3=12
+   560.00ns INFO     test                               MONITOR  PC=0x000000D8  instr=0x000C0013  x1=5  x2=7  x3=12
+   570.00ns INFO     test                               MONITOR  PC=0x000000DC  instr=0x000C8013  x1=5  x2=7  x3=12
+   580.00ns INFO     test                               MONITOR  PC=0x000000E0  instr=0x000D0013  x1=5  x2=7  x3=12
+   590.00ns INFO     test                               MONITOR  PC=0x000000E4  instr=0x000D8013  x1=5  x2=7  x3=12
+   600.00ns INFO     test                               MONITOR  PC=0x000000E8  instr=0x000E0013  x1=5  x2=7  x3=12
+   610.00ns INFO     test                               MONITOR  PC=0x000000EC  instr=0x000E8013  x1=5  x2=7  x3=12
+   620.00ns INFO     test                               MONITOR  PC=0x000000F0  instr=0x000F8013  x1=5  x2=7  x3=12
+   630.00ns INFO     test                               MONITOR  PC=0x000000F4  instr=0x00000013  x1=5  x2=7  x3=12
+   640.00ns INFO     test                               MONITOR  PC=0x000000F8  instr=0x00000013  x1=5  x2=7  x3=12
+   650.00ns INFO     test                               MONITOR  PC=0x000000FC  instr=0x00000013  x1=5  x2=7  x3=12
+   650.00ns INFO     test                               SCOREBOARD  final register check after 64 cycles:
+   650.00ns INFO     test                                 PASS  x1   expected=     5  actual=     5
+   650.00ns INFO     test                                 PASS  x2   expected=     7  actual=     7
+   650.00ns INFO     test                                 PASS  x3   expected=    12  actual=    12
+   650.00ns INFO     test                                 PASS  x4   expected=    13  actual=    13
+   650.00ns INFO     test                                 PASS  x5   expected=     7  actual=     7
+   650.00ns INFO     test                                 PASS  x6   expected=     4  actual=     4
+   650.00ns INFO     test                                 PASS  x7   expected=    15  actual=    15
+   650.00ns INFO     test                                 PASS  x8   expected=    11  actual=    11
+   650.00ns INFO     test                                 PASS  x9   expected=   384  actual=   384
+   650.00ns INFO     test                                 PASS  x10  expected=     0  actual=     0
+   650.00ns INFO     test                                 PASS  x11  expected=     0  actual=     0
+   650.00ns INFO     test                                 PASS  x12  expected=     1  actual=     1
+   650.00ns INFO     test                                 PASS  x13  expected=     1  actual=     1
+   650.00ns INFO     test                                 PASS  x14  expected=     0  actual=     0
+   650.00ns INFO     test                                 PASS  x15  expected=    12  actual=    12
+   650.00ns INFO     test                                 PASS  x16  expected=     9  actual=     9
+   650.00ns INFO     test                                 PASS  x17  expected=    24  actual=    24
+   650.00ns INFO     test                                 PASS  x18  expected=     6  actual=     6
+   650.00ns INFO     test                                 PASS  x19  expected=     6  actual=     6
+   650.00ns INFO     test                                 PASS  x20  expected=     1  actual=     1
+   650.00ns INFO     test                                 PASS  x21  expected=     1  actual=     1
+   650.00ns INFO     test                                 PASS  x22  expected=    12  actual=    12
+   650.00ns INFO     test                                 PASS  x23  expected=    13  actual=    13
+   650.00ns INFO     test                                 PASS  x24  expected=     7  actual=     7
+   650.00ns INFO     test                                 PASS  x25  expected=     4  actual=     4
+   650.00ns INFO     test                                 PASS  x26  expected=    15  actual=    15
+   650.00ns INFO     test                                 PASS  x27  expected=    11  actual=    11
+   650.00ns INFO     test                                 PASS  x28  expected=   384  actual=   384
+   650.00ns INFO     test                                 PASS  x29  expected=     4  actual=     4
+   650.00ns INFO     test                                 PASS  x30  expected=   168  actual=   168
+   650.00ns INFO     test                                 PASS  x31  expected=     9  actual=     9
+   650.00ns INFO     test                               SCOREBOARD  SMOKE PASS - all registers correct
+   660.00ns INFO     test                               MONITOR  PC=0x00000100  instr=0x00000000  x1=5  x2=7  x3=12
+   670.00ns INFO     test                               MONITOR  PC=0x00000104  instr=0x00000000  x1=5  x2=7  x3=12
+   680.00ns INFO     test                               MONITOR  PC=0x00000108  instr=0x00000000  x1=5  x2=7  x3=12
+   690.00ns INFO     test                               MONITOR  PC=0x0000010C  instr=0x00000000  x1=5  x2=7  x3=12
+   700.00ns INFO     test                               MONITOR  PC=0x00000110  instr=0x00000000  x1=5  x2=7  x3=12
+   710.00ns INFO     test                               MONITOR  PC=0x00000114  instr=0x00000000  x1=5  x2=7  x3=12
+   720.00ns INFO     test                               MONITOR  PC=0x00000118  instr=0x00000000  x1=5  x2=7  x3=12
+   730.00ns INFO     test                               MONITOR  PC=0x0000011C  instr=0x00000000  x1=5  x2=7  x3=12
+   740.00ns INFO     test                               MONITOR  PC=0x00000120  instr=0x00000000  x1=5  x2=7  x3=12
+   750.00ns INFO     test                               MONITOR  PC=0x00000124  instr=0x00000000  x1=5  x2=7  x3=12
+   760.00ns INFO     test                               MONITOR  PC=0x00000128  instr=0x00000000  x1=5  x2=7  x3=12
+   770.00ns INFO     test                               MONITOR  PC=0x0000012C  instr=0x00000000  x1=5  x2=7  x3=12
+   780.00ns INFO     test                               MONITOR  PC=0x00000130  instr=0x00000000  x1=5  x2=7  x3=12
+   790.00ns INFO     test                               MONITOR  PC=0x00000134  instr=0x00000000  x1=5  x2=7  x3=12
+   800.00ns INFO     test                               MONITOR  PC=0x00000138  instr=0x00000000  x1=5  x2=7  x3=12
+   810.00ns INFO     test                               MONITOR  PC=0x0000013C  instr=0x00000000  x1=5  x2=7  x3=12
+   820.00ns INFO     test                               MONITOR  PC=0x00000140  instr=0x00000000  x1=5  x2=7  x3=12
+   830.00ns INFO     test                               MONITOR  PC=0x00000144  instr=0x00000000  x1=5  x2=7  x3=12
+   840.00ns INFO     test                               MONITOR  PC=0x00000148  instr=0x00000000  x1=5  x2=7  x3=12
+   850.00ns INFO     test                               MONITOR  PC=0x0000014C  instr=0x00000000  x1=5  x2=7  x3=12
+   860.00ns INFO     test                               MONITOR  PC=0x00000150  instr=0x00000000  x1=5  x2=7  x3=12
+   870.00ns INFO     test                               MONITOR  PC=0x00000154  instr=0x00000000  x1=5  x2=7  x3=12
+   880.00ns INFO     test                               MONITOR  PC=0x00000158  instr=0x00000000  x1=5  x2=7  x3=12
+   890.00ns INFO     test                               MONITOR  PC=0x0000015C  instr=0x00000000  x1=5  x2=7  x3=12
+   900.00ns INFO     test                               MONITOR  PC=0x00000160  instr=0x00000000  x1=5  x2=7  x3=12
+   910.00ns INFO     test                               MONITOR  PC=0x00000164  instr=0x00000000  x1=5  x2=7  x3=12
+   920.00ns INFO     test                               MONITOR  PC=0x00000168  instr=0x00000000  x1=5  x2=7  x3=12
+   930.00ns INFO     test                               MONITOR  PC=0x0000016C  instr=0x00000000  x1=5  x2=7  x3=12
+   940.00ns INFO     test                               MONITOR  PC=0x00000170  instr=0x00000000  x1=5  x2=7  x3=12
+   950.00ns INFO     test                               MONITOR  PC=0x00000174  instr=0x00000000  x1=5  x2=7  x3=12
+   960.00ns INFO     test                               MONITOR  PC=0x00000178  instr=0x00000000  x1=5  x2=7  x3=12
+   970.00ns INFO     test                               MONITOR  PC=0x0000017C  instr=0x00000000  x1=5  x2=7  x3=12
+   980.00ns INFO     test                               MONITOR  PC=0x00000180  instr=0x00000000  x1=5  x2=7  x3=12
+   990.00ns INFO     test                               MONITOR  PC=0x00000184  instr=0x00000000  x1=5  x2=7  x3=12
+  1000.00ns INFO     test                               MONITOR  PC=0x00000188  instr=0x00000000  x1=5  x2=7  x3=12
+  1010.00ns INFO     test                               MONITOR  PC=0x0000018C  instr=0x00000000  x1=5  x2=7  x3=12
+  1020.00ns INFO     test                               MONITOR  PC=0x00000190  instr=0x00000000  x1=5  x2=7  x3=12
+  1030.00ns INFO     test                               MONITOR  PC=0x00000194  instr=0x00000000  x1=5  x2=7  x3=12
+  1040.00ns INFO     test                               MONITOR  PC=0x00000198  instr=0x00000000  x1=5  x2=7  x3=12
+  1050.00ns INFO     test                               MONITOR  PC=0x0000019C  instr=0x00000000  x1=5  x2=7  x3=12
+  1060.00ns INFO     test                               MONITOR  PC=0x000001A0  instr=0x00000000  x1=5  x2=7  x3=12
+  1070.00ns INFO     test                               MONITOR  PC=0x000001A4  instr=0x00000000  x1=5  x2=7  x3=12
+  1080.00ns INFO     test                               MONITOR  PC=0x000001A8  instr=0x00000000  x1=5  x2=7  x3=12
+  1090.00ns INFO     test                               MONITOR  PC=0x000001AC  instr=0x00000000  x1=5  x2=7  x3=12
+  1100.00ns INFO     test                               MONITOR  PC=0x000001B0  instr=0x00000000  x1=5  x2=7  x3=12
+  1110.00ns INFO     test                               MONITOR  PC=0x000001B4  instr=0x00000000  x1=5  x2=7  x3=12
+  1120.00ns INFO     test                               MONITOR  PC=0x000001B8  instr=0x00000000  x1=5  x2=7  x3=12
+  1130.00ns INFO     test                               MONITOR  PC=0x000001BC  instr=0x00000000  x1=5  x2=7  x3=12
+  1140.00ns INFO     test                               MONITOR  PC=0x000001C0  instr=0x00000000  x1=5  x2=7  x3=12
+  1150.00ns INFO     test                               MONITOR  PC=0x000001C4  instr=0x00000000  x1=5  x2=7  x3=12
+  1160.00ns INFO     test                               MONITOR  PC=0x000001C8  instr=0x00000000  x1=5  x2=7  x3=12
+  1170.00ns INFO     test                               MONITOR  PC=0x000001CC  instr=0x00000000  x1=5  x2=7  x3=12
+  1180.00ns INFO     test                               MONITOR  PC=0x000001D0  instr=0x00000000  x1=5  x2=7  x3=12
+  1190.00ns INFO     test                               MONITOR  PC=0x000001D4  instr=0x00000000  x1=5  x2=7  x3=12
+  1200.00ns INFO     test                               MONITOR  PC=0x000001D8  instr=0x00000000  x1=5  x2=7  x3=12
+  1210.00ns INFO     test                               MONITOR  PC=0x000001DC  instr=0x00000000  x1=5  x2=7  x3=12
+  1220.00ns INFO     test                               MONITOR  PC=0x000001E0  instr=0x00000000  x1=5  x2=7  x3=12
+  1230.00ns INFO     test                               MONITOR  PC=0x000001E4  instr=0x00000000  x1=5  x2=7  x3=12
+  1240.00ns INFO     test                               MONITOR  PC=0x000001E8  instr=0x00000000  x1=5  x2=7  x3=12
+  1250.00ns INFO     test                               MONITOR  PC=0x000001EC  instr=0x00000000  x1=5  x2=7  x3=12
+  1260.00ns INFO     test                               MONITOR  PC=0x000001F0  instr=0x00000000  x1=5  x2=7  x3=12
+  1270.00ns INFO     test                               MONITOR  PC=0x000001F4  instr=0x00000000  x1=5  x2=7  x3=12
+  1280.00ns INFO     test                               MONITOR  PC=0x000001F8  instr=0x00000000  x1=5  x2=7  x3=12
+  1290.00ns INFO     test                               ========================================================================
+  1290.00ns INFO     test                               COVERAGE REPORT
+  1290.00ns INFO     test                               ========================================================================
+  1290.00ns INFO     test                                 Instruction Type (opcode): 9/11 bins hit (81.8%)
+  1290.00ns INFO     test                                   missed: SYSTEM, FENCE
+  1290.00ns INFO     test                                 R-type ALU Operations: 10/10 bins hit (100.0%)
+  1290.00ns INFO     test                                   all bins covered
+  1290.00ns INFO     test                                 I-type ALU Operations: 8/8 bins hit (100.0%)
+  1290.00ns INFO     test                                   all bins covered
+  1290.00ns INFO     test                                 Destination Register (rd): 31/31 bins hit (100.0%)
+  1290.00ns INFO     test                                   all bins covered
+  1290.00ns INFO     test                                 Source Register rs1: 32/32 bins hit (100.0%)
+  1290.00ns INFO     test                                   all bins covered
+  1290.00ns INFO     test                               ========================================================================
+  1290.00ns INFO     test                               TEST  SMOKE PASS  x1=5  x2=7  x3=12
+  1290.00ns INFO     cocotb.regression                  cocotb_tests.test_single_cycle.run_pyuvm_smoke passed
+  1290.00ns INFO     cocotb.regression                  ********************************************************************************************************
+                                                        ** TEST                                            STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+                                                        ********************************************************************************************************
+                                                        ** cocotb_tests.test_single_cycle.run_pyuvm_smoke   PASS        1290.00           0.05      23658.92  **
+                                                        ********************************************************************************************************
+                                                        ** TESTS=1 PASS=1 FAIL=0 SKIP=0                                 1290.00           0.06      22665.17  **
+                                                        ********************************************************************************************************
+IMEM: reading /home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/programs/prog1.hex
+Simulation complete via $finish(1) at time 1290 NS + 2
+xcelium> exit
+TOOL:	xrun(64)	24.03-s004: Exiting on Apr 07, 2026 at 15:35:03 EEST  (total: 00:00:03)
+make[1]: Leaving directory '/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/tb_pyuvm'
