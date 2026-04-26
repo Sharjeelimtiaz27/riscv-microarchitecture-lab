@@ -42,7 +42,8 @@ This document provides a complete technical reference for the single-cycle RV32I
 | I-type ALU | ADDI, ANDI, ORI, XORI, SLLI, SRLI, SRAI, SLTI, SLTIU | Implemented |
 | Load | LW | Implemented |
 | Store | SW | Implemented |
-| Branch | BEQ, BNE, BLT, BGE, BLTU, BGEU | Implemented |
+| Branch | BEQ, BNE | Implemented and verified |
+| Branch | BLT, BGE, BLTU, BGEU | Implemented (RTL present, not covered by test program) |
 | Jump | JAL, JALR | Implemented |
 | Upper Immediate | LUI, AUIPC | Implemented |
 | System | ECALL, EBREAK | Not implemented |

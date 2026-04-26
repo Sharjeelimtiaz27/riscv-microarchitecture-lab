@@ -68,7 +68,9 @@ The CSR (Control and Status Register) file provides machine-mode control, trap h
 | Bits | Field | Description |
 |---|---|---|
 | 63:2 | BASE | Trap handler base address (4-byte aligned) |
-| 1:0 | MODE | 0 = Direct (all traps to BASE), 1 = Vectored |
+| 1:0 | MODE | 0 = Direct (all traps go to BASE), 1 = Vectored |
+
+Note: In Vectored mode (MODE=1) the trap vector is `BASE + 4 * cause` only for **asynchronous interrupts**. Synchronous exceptions always jump to BASE regardless of MODE. This is specified in the RISC-V Privileged Architecture v1.12, section 3.1.7.
 
 ---
 
@@ -106,7 +108,7 @@ The CSR (Control and Status Register) file provides machine-mode control, trap h
 4. `mstatus.MPIE` = `mstatus.MIE`
 5. `mstatus.MIE` = 0 (disable interrupts)
 6. `mstatus.MPP` = current privilege mode
-7. PC = `mtvec.BASE` (or `mtvec.BASE + 4 * cause` in vectored mode)
+7. PC = `mtvec.BASE` for exceptions; `mtvec.BASE + 4 * cause` for interrupts when MODE=1 (Vectored)
 
 ### On MRET (return from trap)
 

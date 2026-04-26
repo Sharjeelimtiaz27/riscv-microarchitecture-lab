@@ -8,7 +8,10 @@
 
 ## RV64I Base -- Additions over RV32I
 
-RV64I retains all RV32I instructions and adds the following:
+RV64I retains all RV32I instructions with the following behavioral change: **LUI and AUIPC sign-extend their 32-bit result to 64 bits.** Bit 31 of the result is replicated into bits 63:32. This means a U-immediate with bit 31 set will produce a negative 64-bit value. AUIPC computes `PC + sign_ext(imm << 12)`.
+
+RV64I adds the following:
+
 
 ### 64-bit Arithmetic
 

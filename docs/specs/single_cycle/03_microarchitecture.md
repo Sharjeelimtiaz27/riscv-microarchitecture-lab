@@ -106,9 +106,11 @@ The control unit decodes `instr[6:0]` (opcode) and generates the following signa
 | JAL | 1 | -- | 0 | 0 | 0 | 1 | 10 | -- |
 | JALR | 1 | 1 | 0 | 0 | 0 | 1 | 10 | 00 |
 | LUI | 1 | 1 | 0 | 0 | 0 | 0 | 00 | 11 |
-| AUIPC | 1 | 1 | 0 | 0 | 0 | 0 | 00 | 11 |
+| AUIPC | 1 | 1 | 0 | 0 | 0 | 0 | 00 | 00 |
 
-alu_op encoding: 00 = ADD (for load/store address), 01 = SUB (for branch compare), 10 = decode from funct3/funct7, 11 = pass-through (for LUI/AUIPC).
+alu_op encoding: 00 = ADD (for load/store address and AUIPC), 01 = branch compare (funct3 selects condition), 10 = decode from funct3/funct7, 11 = pass-through immediate (for LUI only).
+
+Note: LUI and AUIPC both have alu_src=1 (immediate as second operand). LUI uses alu_op=11 to pass the immediate directly (first ALU input is irrelevant). AUIPC uses alu_op=00 (ADD) with the PC substituted as the first ALU operand, yielding PC+imm. This requires the datapath to select PC rather than rs1_data as the ALU A input when alu_op=00 and jump=0 and the opcode is AUIPC.
 
 ---
 
@@ -152,13 +154,25 @@ The `immgen` module sign-extends the instruction immediate field based on the in
 PC update logic (combinational):
 
 ```
-branch_taken = branch & (alu_zero ^ invert_flag)
 pc_target    = PC + imm_ext          (branch or JAL)
-jalr_target  = (rs1_data + imm_ext) & ~32'h1
-pc_next      = jump    ? (jalr ? jalr_target : pc_target)
+jalr_target  = (rs1_data + imm_ext) & ~32'h1   (LSB forced to 0 per spec)
+pc_next      = jump         ? (jalr ? jalr_target : pc_target)
              : branch_taken ? pc_target
              : PC + 4
 ```
+
+Branch condition evaluation (per funct3):
+
+| funct3 | Mnemonic | Condition |
+|---|---|---|
+| 000 | BEQ | ALU zero = 1 (rs1 == rs2) |
+| 001 | BNE | ALU zero = 0 (rs1 != rs2) |
+| 100 | BLT | signed less than: (ALU negative XOR ALU overflow) = 1 |
+| 101 | BGE | signed greater or equal: (ALU negative XOR ALU overflow) = 0 |
+| 110 | BLTU | unsigned less than: ALU borrow (carry-out inverted) = 1 |
+| 111 | BGEU | unsigned greater or equal: ALU borrow = 0 |
+
+The ALU computes `rs1 - rs2` for all branch types (alu_op=01). BEQ/BNE use the zero flag. BLT/BGE require a sign flag XOR overflow flag. BLTU/BGEU require an unsigned borrow flag. The branch condition mux selects among these outputs based on funct3.
 
 The PC register updates on the rising clock edge when rst_n is asserted.
 
