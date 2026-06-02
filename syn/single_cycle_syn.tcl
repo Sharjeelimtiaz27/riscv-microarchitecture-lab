@@ -99,3 +99,7 @@ puts "    Netlist : syn/results/single_cycle_mapped.v"
 puts "    SDF     : syn/results/single_cycle.sdf"
 puts "    Area    : syn/results/area.rpt"
 puts "    Timing  : syn/results/timing.rpt"
+
+# Close Genus cleanly instead of dropping into the interactive shell.
+# Without this, Genus stays at the @genus:root> prompt after the script ends.
+exit
