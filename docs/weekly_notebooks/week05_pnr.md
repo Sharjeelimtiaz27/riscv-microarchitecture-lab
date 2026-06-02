@@ -1,8 +1,11 @@
-# Week 04 -- Place and Route: Innovus Flow, Physical Design Concepts, and Reports
+# Week 05 -- Place and Route: Innovus Flow, Physical Design Concepts, and Reports
 
 **Focus:** Taking the synthesized gate-level netlist through physical implementation using Cadence Innovus. Understanding floorplanning, power planning, placement, clock tree synthesis, routing, and output verification.
 
-**Prerequisite:** Genus synthesis complete. `syn/results/single_cycle_mapped.v` and `syn/results/single_cycle.sdf` exist and Conformal equivalence check passed.
+**Prerequisite:** Genus synthesis of the CORE complete (Week 04). The inputs are
+`syn/results/single_cycle_core_mapped.v` (3421 cells, 1022 flops) and
+`syn/results/single_cycle_core.sdf`. The P&R target module is `single_cycle_core`
+(the synthesis-ready core with memory ports; memories are external SRAM macros).
 
 ---
 
