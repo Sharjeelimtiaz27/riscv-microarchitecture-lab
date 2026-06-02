@@ -36,7 +36,16 @@ module single_cycle_top #(
   parameter IMEM_INIT = "/home/sharjeel/sharjeelphd/Research/riscv-microarchitecture-lab/rtl/common/programs/prog1.hex"
 )(
   input  logic        clk,
-  input  logic        rst_n
+  input  logic        rst_n,
+  // Debug / trace outputs -- expose architectural state for observability.
+  // Required so synthesis has primary outputs to drive (otherwise the
+  // optimizer deletes the whole datapath as unobservable). Also useful for
+  // gate-level simulation, trace, and verification.
+  output logic [31:0] dbg_pc,        // current program counter
+  output logic [31:0] dbg_instr,     // current instruction word
+  output logic        dbg_reg_write, // register write-back enable
+  output logic [4:0]  dbg_rd,        // write-back destination register
+  output logic [31:0] dbg_wb_data    // write-back data value
 );
   // PC & instruction
   logic [31:0] pc, next_pc, instr;
@@ -115,5 +124,13 @@ module single_cycle_top #(
 
   // next PC (simple +4)
   assign next_pc = pc + 32'd4;
+
+  // Debug / trace output assignments -- drive primary outputs from
+  // existing internal datapath signals. Purely additive, no logic change.
+  assign dbg_pc        = pc;
+  assign dbg_instr     = instr;
+  assign dbg_reg_write = reg_write;
+  assign dbg_rd        = rd;
+  assign dbg_wb_data   = wb_data;
 
 endmodule
