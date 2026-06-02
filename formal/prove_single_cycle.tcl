@@ -80,18 +80,12 @@ set_prove_time_limit 3600s
 # JasperGold will produce: Proven / Bounded Proof / Falsified / Inconclusive.
 # =============================================================================
 
-prove -bg -all
+prove -all
 
 # =============================================================================
 # STEP 6: REPORTS
-# Write summary and counterexample reports to the results directory.
+# prove -all (no -bg) blocks until all proofs complete.
+# JasperGold prints the full summary automatically on exit in batch mode.
 # =============================================================================
 
-report_results -type summary  -file formal/results/proof_summary.rpt
-report_results -type property -file formal/results/property_details.rpt
-
-# Print result table to log for quick review on HPC terminal
-puts "\n=== PROOF SUMMARY ==="
-report_results -type summary
-
-puts "\n=== Formal verification complete. Check formal/results/ for reports. ==="
+puts "\n=== Formal verification complete. ==="
