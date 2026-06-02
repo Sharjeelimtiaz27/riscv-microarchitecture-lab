@@ -23,6 +23,93 @@ Synthesis outputs feed directly into:
 
 ---
 
+## Part 1a: Standard Cell Libraries -- The Beginner's Guide (Vivado vs Genus)
+
+If you have only used Vivado or Quartus before, the single biggest surprise with Genus is this: **you must supply a technology library, or the tool literally cannot run.** This section explains why, in plain terms.
+
+### The Vivado experience you already know
+
+In Vivado, you write RTL, click "Synthesize," and it just works. You never hand it a library file. Why? Because Vivado targets a **specific Xilinx FPGA chip you already selected** (for example, an Artix-7 xc7a35t). That chip is fixed silicon. It already physically contains:
+
+- A fixed number of Look-Up Tables (LUTs)
+- A fixed number of flip-flops
+- Dedicated block RAM, DSP slices, clock managers
+
+The "library" for an FPGA is **built into the chip and bundled inside Vivado**. When you pick the part number, Vivado already knows every primitive available, their exact timing, and their exact resources. The library is invisible because it is baked in. You are not building the silicon -- you are configuring silicon that already exists.
+
+### Why Genus is completely different
+
+Genus does **ASIC** synthesis, not FPGA synthesis. You are not configuring an existing chip -- you are **building a brand-new chip from scratch**. There is no pre-existing silicon. There are no LUTs. The transistors do not exist yet.
+
+So Genus has to ask a question Vivado never asks:
+
+> "What logic gates am I even allowed to use, and how big and how fast is each one?"
+
+That answer comes from the **standard cell library** -- the `.lib` (Liberty) file you supply. Without it, Genus has no vocabulary. It is like asking someone to write a sentence but giving them no alphabet.
+
+### What a standard cell library actually contains
+
+A standard cell library is a catalog, provided by the chip foundry, describing every pre-designed logic gate available in that manufacturing process. For each cell (e.g. a 2-input AND gate `AND2`), the `.lib` file lists:
+
+| Information | Example | Why Genus needs it |
+|-------------|---------|-------------------|
+| Logic function | `Z = A & B` | To know what the cell does |
+| Area | 9.3 um^2 | To minimize total chip size |
+| Input-to-output delay | 82 ps | To meet your clock period |
+| Input capacitance | 4.6 fF | To compute loading on driving cells |
+| Power per switch | 0.01 pW | To estimate power consumption |
+| Drive strength variants | base cell + drive-strength variants | Bigger versions drive more load faster |
+
+Our run loaded `<cell_library.lib>` and the log reported:
+```
+domain _default_: <N> combo usable cells and <M> sequential usable cells
+```
+That means the library gives Genus **377 combinational gates** and **81 flip-flop/latch types** to build the processor from. That is its entire alphabet.
+
+### The mental model: synthesis is translation
+
+Think of synthesis as translating your design into a new language:
+
+- **Your RTL** = the meaning you want to express (the source language)
+- **The standard cell library** = the dictionary of available words (the target language)
+- **Genus** = the translator
+- **The gate-level netlist** = the translated sentence
+
+A translator with no dictionary produces nothing. That is exactly why our first attempt with a missing/wrong setup failed, and why the library path is the very first thing the script sets.
+
+### Why the foundry, not Cadence, provides the library
+
+This is a subtle but important point. Cadence makes the **tool** (Genus). But the **library** describes physical transistors that only exist in a specific factory's manufacturing process. Only the foundry (TSMC, GlobalFoundries, Intel, Samsung) knows:
+
+- How fast their transistors switch
+- How much area each gate occupies on their wafer
+- How much current each gate leaks
+
+So the foundry characterizes their cells and ships the `.lib` file. Cadence's tool reads it. This separation is why the same RTL can be synthesized to a TSMC 28nm chip or an 180nm chip just by swapping the library -- the RTL never changes, only the target "dictionary" does.
+
+### FPGA vs ASIC library summary
+
+| Aspect | FPGA (Vivado) | ASIC (Genus) |
+|--------|---------------|--------------|
+| Target | Existing chip you bought | New chip you are creating |
+| Primitives | LUTs, BRAM, DSP (fixed) | Standard cells from a `.lib` |
+| Library source | Built into Vivado | Supplied by the foundry |
+| Do you pick a library? | No (pick a part number) | Yes (mandatory `.lib` path) |
+| Can the tool run without it? | Yes | No -- it has no gates to map to |
+| Output | Bitstream to configure the FPGA | Netlist to manufacture a chip |
+| Can you change the clock target? | Within the chip's limits | Anything the process supports |
+
+### What this means for our project
+
+This is why our synthesis script begins with:
+```tcl
+set_db lib_search_path <LIB_DIR>
+set_db library         {<cell_library.lib>}
+```
+Those two lines hand Genus its alphabet (0.18um cells at the typical corner). Everything after -- `read_hdl`, `elaborate`, `syn_generic`, `syn_map` -- depends on that alphabet existing. The `syn_map` stage in particular is the moment Genus replaces your abstract logic with real cells picked from this library.
+
+---
+
 ## Part 2: The Three-Stage Synthesis Flow
 
 Genus synthesis has three mandatory stages, each with a specific purpose.
