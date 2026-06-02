@@ -22,3 +22,6 @@ set_output_delay 2.0 -clock clk [all_outputs]
 
 # Reset is asynchronous -- skip timing analysis on this path
 set_false_path -from [get_ports rst_n]
+
+# Note: set_dont_touch_network is a Synopsys DC command, not supported in Genus.
+# Clock network preservation in Genus is handled automatically.

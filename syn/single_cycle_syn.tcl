@@ -53,6 +53,13 @@ read_hdl -sv {
 
 elaborate single_cycle_top
 
+# single_cycle_top has no output ports (simulation-only RTL design).
+# Without this, Genus removes ALL logic as "not driving any primary output"
+# (GLO-34 message). With these set, flip-flops are kept, and all combinational
+# logic feeding their D inputs is preserved by cascade.
+set_db / .delete_unloaded_insts false
+set_db / .delete_unloaded_seqs  false
+
 # =============================================================================
 # STEP 4: TIMING CONSTRAINTS
 # Target: 100 MHz (10 ns). 0.18um typical corner can meet this.
