@@ -52,9 +52,7 @@ analyze -sv12 \
 # contents as free symbolic values unless constrained.
 # =============================================================================
 
-elaborate \
-    -top single_cycle_top \
-    -param {IMEM_INIT rtl/common/programs/prog1.hex}
+elaborate -top single_cycle_top
 
 # =============================================================================
 # STEP 3: CLOCK AND RESET
