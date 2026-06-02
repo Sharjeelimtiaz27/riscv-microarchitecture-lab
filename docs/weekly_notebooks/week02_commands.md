@@ -138,8 +138,11 @@ grep -i "SVA FAIL\|SVA WARN\|assert" artifacts/xrun_sva.log
 ## 9. JasperGold Formal (Template — script not yet written)
 
 ```bash
-# Run JasperGold in batch mode with a TCL script
-jg -batch formal/prove_single_cycle.tcl
+# Run JasperGold -- session stored in formal/sessions/single_cycle/
+jg -proj formal/sessions/single_cycle -batch formal/prove_single_cycle.tcl
+
+# Pipeline design (Phase 2)
+# jg -proj formal/sessions/pipeline -batch formal/prove_pipeline.tcl
 
 # TCL script structure (formal/prove_single_cycle.tcl):
 # clear -all
