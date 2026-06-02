@@ -579,13 +579,20 @@ If Conformal FAILS: synthesis introduced a functional mismatch. This is rare but
 |------|--------|
 | syn/single_cycle_syn.tcl written | Done |
 | syn/constraints/single_cycle.sdc written | Done |
-| Genus synthesis run on TalTech HPC | Pending |
-| Area report reviewed | Pending |
-| Timing report reviewed -- critical path identified | Pending |
-| Gate-level netlist produced (single_cycle_mapped.v) | Pending |
-| SDF file produced (single_cycle.sdf) | Pending |
-| GLS run with SDF back-annotation | Pending |
-| Conformal equivalence check (RTL == netlist) | Pending |
+| 0.18um library located and configured (<cell_library>) | Done |
+| First synthesis attempt (single_cycle_top) | Done -- empty/30-flop, diagnosed |
+| Root cause found: memories black-boxed, datapath collapsed | Done |
+| single_cycle_core.sv created (memory port interface) | Done |
+| syn/single_cycle_core_syn.tcl written | Done |
+| Core synthesis run on TalTech HPC | Done |
+| Area report reviewed (3421 cells, 180420 um^2) | Done |
+| Timing report reviewed (critical path: imem_rdata -> ALU -> wb, MET +3979 ps) | Done |
+| Flip-flop count verified (1022 = 30 PC + 992 regfile) | Done |
+| Gate-level netlist produced (single_cycle_core_mapped.v) | Done |
+| SDF file produced (single_cycle_core.sdf) | Done |
+| Results committed and pushed to GitHub | Done |
+| GLS run with SDF back-annotation | Pending (Week 05) |
+| Conformal equivalence check (RTL == netlist) | Pending (Week 05) |
 
 ---
 
