@@ -11,6 +11,20 @@ waves.vcd
 *.shm/
 *.diag
 
+# EDA tool scratch -- large, regenerable, tool-internal (do NOT commit)
+# JasperGold session databases
+formal/sessions/**/jgproject/
+jgproject/
+# Genus formal-verification scratch and run logs
+fv/
+genus.log*
+genus.cmd*
+.genus*
+# Innovus run logs
+innovus.log*
+innovus.cmd*
+*.rpt.gz
+
 # Python
 __pycache__/
 *.pyc
