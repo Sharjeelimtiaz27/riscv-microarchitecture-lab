@@ -52,7 +52,10 @@ analyze -sv12 \
 # contents as free symbolic values unless constrained.
 # =============================================================================
 
-elaborate -top single_cycle_top
+# -bbox_a 8192 prevents automatic black-boxing of memory arrays up to 8192 elements.
+# Without this, JasperGold black-boxes inst_memory and data_memory (VERI-9033),
+# making write-then-read properties unprovable.
+elaborate -top single_cycle_top -bbox_a 8192
 
 # =============================================================================
 # STEP 3: CLOCK AND RESET

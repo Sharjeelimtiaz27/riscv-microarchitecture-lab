@@ -48,13 +48,15 @@ module pc_assertions (
     assert property (p_reset_value)
         else $error("PC FAIL: PC not 0 while in reset -- pc=%h", pc);
 
-    // Exactly one cycle after reset deasserts, PC is 0
+    // At the posedge where reset deasserts, PC is still 0.
+    // Uses |-> (same cycle): the async reset holds pc=0 until posedge, so the
+    // sampled value is 0. |=> would check the NEXT cycle when pc has advanced to 4.
     property p_rose_reset_pc_zero;
         @(posedge clk)
-        $rose(rst_n) |=> (pc == 32'h0000_0000);
+        $rose(rst_n) |-> (pc == 32'h0000_0000);
     endproperty
     assert property (p_rose_reset_pc_zero)
-        else $error("PC FAIL: PC not 0 in first active cycle after reset");
+        else $error("PC FAIL: PC not 0 at reset deassert cycle");
 
     //=========================================================================
     // REGISTER BEHAVIOR

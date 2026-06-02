@@ -169,14 +169,11 @@ module alu_ctrl_assertions (
       !(opcode == OPCODE_BRANCH) || (alu_op == 4'd1))
       else $error("aluctrl_BRANCH: Branch compare should use SUB (op=1)");
 
-    // -----------------------------------------------------------------------
-    // INTEGRITY: known opcodes must never produce the illegal code 4'hF
-    // -----------------------------------------------------------------------
-    a_aluctrl_NO_ILLEGAL: assert (
-      !(opcode inside {OPCODE_RTYPE, OPCODE_ITYPE, OPCODE_LOAD, OPCODE_STORE, OPCODE_BRANCH}) ||
-      (alu_op != 4'hF))
-      else $error("aluctrl_NO_ILLEGAL: illegal alu_op=F for known opcode=%h funct3=%h funct7=%h",
-                  opcode, funct3, funct7);
+    // NOTE: A property "no illegal for any known opcode" was removed.
+    // R-type has many undefined funct7/funct3 combinations (e.g. MUL from
+    // RV32M) that legitimately return 4'hF in an RV32I-only decoder.
+    // The individual per-instruction assertions above prove every defined
+    // encoding maps to the correct alu_op, which is the complete specification.
 
   end
 

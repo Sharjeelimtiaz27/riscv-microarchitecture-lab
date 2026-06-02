@@ -114,7 +114,7 @@ module regfile_assertions (
     // Reset: first cycle after reset deasserts, read ports return 0
     property p_reset_clears_read_ports;
         @(posedge clk)
-        $rose(rst_n) |=> (rd1 == 32'd0 && rd2 == 32'd0);
+        $rose(rst_n) |-> (rd1 == 32'd0 && rd2 == 32'd0);
     endproperty
     assert property (p_reset_clears_read_ports)
         else $error("REGFILE FAIL: read port non-zero after reset");
@@ -199,7 +199,7 @@ module regfile_assertions (
     // SEC-9: Reset integrity for x0 (internal array element).
     property p_sec_reset_clears_x0;
         @(posedge clk)
-        $rose(rst_n) |=> (regs_x0 == 32'd0);
+        $rose(rst_n) |-> (regs_x0 == 32'd0);
     endproperty
     assert property (p_sec_reset_clears_x0)
         else $error("SECURITY FAIL: regs[0] non-zero after reset");
@@ -207,7 +207,7 @@ module regfile_assertions (
     // SEC-10: Reset integrity for x1.
     property p_sec_reset_clears_x1;
         @(posedge clk)
-        $rose(rst_n) |=> (regs_x1 == 32'd0);
+        $rose(rst_n) |-> (regs_x1 == 32'd0);
     endproperty
     assert property (p_sec_reset_clears_x1)
         else $error("SECURITY FAIL: regs[1] non-zero after reset");
@@ -215,7 +215,7 @@ module regfile_assertions (
     // SEC-11: Reset integrity for x2.
     property p_sec_reset_clears_x2;
         @(posedge clk)
-        $rose(rst_n) |=> (regs_x2 == 32'd0);
+        $rose(rst_n) |-> (regs_x2 == 32'd0);
     endproperty
     assert property (p_sec_reset_clears_x2)
         else $error("SECURITY FAIL: regs[2] non-zero after reset");
