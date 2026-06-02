@@ -362,11 +362,33 @@ bind regfile regfile_assertions u_regfile_assert (
 ```tcl
 clear -all                              # reset tool state
 analyze -sv12 {file1.sv file2.sv}       # compile RTL + assertion files
-elaborate -top module_name -bbox_a 8192 # elaborate; prevent memory black-boxing
+elaborate -top module_name -bbox_a 8192 # elaborate; -bbox_a prevents memory black-boxing
 clock clk                               # declare primary clock
 reset -expression {!rst_n}             # declare reset (active-low = !rst_n)
-prove -all                              # prove all properties (synchronous, blocks)
-prove -bg -all                          # prove in background (script continues immediately -- don't report right after)
+prove -all                              # prove synchronously; blocks until complete
+prove -bg -all                          # prove in background -- script continues; don't report right after
+```
+
+### Session directory -- run command
+
+JasperGold stores session data (proof databases, CEX waveforms) in a project directory set with `-proj`. Always specify the session folder so each design has its own isolated session:
+
+```bash
+# Single-cycle RV32I
+jg -proj formal/sessions/single_cycle -batch formal/prove_single_cycle.tcl
+
+# Pipeline RV64IM (Phase 2, future)
+jg -proj formal/sessions/pipeline -batch formal/prove_pipeline.tcl
+```
+
+Directory structure:
+```
+formal/
+  sessions/
+    single_cycle/   <- all JasperGold session data for this design
+    pipeline/       <- ready for Phase 2
+  prove_single_cycle.tcl
+  results/
 ```
 
 ### bbox_a flag -- critical for memories
@@ -472,7 +494,7 @@ This is CORRECT and GOOD. The top_assertions.sv property `p_mem_rw_exclusive` wa
 | |=> to |-> fix (x4 properties) | Done |
 | Remove over-broad NO_ILLEGAL assertion | Done |
 | -bbox_a 8192 added to elaborate | Done |
-| Second JasperGold run -- confirm 89/89 | Pending |
+| Second JasperGold run -- confirm 89/89 (`jg -proj formal/sessions/single_cycle -batch formal/prove_single_cycle.tcl`) | Pending |
 
 ---
 

@@ -5,7 +5,12 @@
 # Usage (on TalTech HPC after loading Cadence environment):
 #   cad && 1.3
 #   cd <repo_root>
-#   jg -batch formal/prove_single_cycle.tcl
+#   jg -proj formal/sessions/single_cycle -batch formal/prove_single_cycle.tcl
+#
+# The -proj flag stores all JasperGold session data (proof databases, waveforms,
+# counterexample traces) in formal/sessions/single_cycle/.
+# For the pipeline design (Phase 2), use:
+#   jg -proj formal/sessions/pipeline -batch formal/prove_pipeline.tcl
 #
 # What this script does:
 #   1. Analyzes all RTL files and all assertion files (which include bind)
@@ -13,18 +18,16 @@
 #   3. Declares clock and reset
 #   4. Proves all assert properties exhaustively
 #   5. Checks all cover properties are reachable
-#   6. Writes summary and counterexample reports
 # =============================================================================
 
 clear -all
 
 # =============================================================================
 # STEP 1: ANALYZE
-# Load all SystemVerilog files. The assertion files include bind statements
-# so they are analyzed alongside the RTL -- no separate bind file pass needed.
+# Load all SystemVerilog files. Assertion files include bind statements so
+# they are analyzed alongside the RTL -- no separate bind file pass needed.
 # =============================================================================
 
-# RTL design files
 analyze -sv12 \
     rtl/common/alu.sv \
     rtl/common/alu_ctrl.sv \
@@ -35,7 +38,6 @@ analyze -sv12 \
     rtl/common/inst_memory.sv \
     rtl/single_cycle/single_cycle_top.sv
 
-# Assertion files -- each file contains the checker module AND its bind statement
 analyze -sv12 \
     rtl/assertions/alu_assertions.sv \
     rtl/assertions/alu_ctrl_assertions.sv \
@@ -47,48 +49,29 @@ analyze -sv12 \
 
 # =============================================================================
 # STEP 2: ELABORATE
-# Build the design database. The IMEM_INIT parameter gives the path to the
-# hex program loaded into instruction memory. JasperGold will treat the memory
-# contents as free symbolic values unless constrained.
+# -bbox_a 8192: prevents auto-black-boxing of memory arrays (VERI-9033).
+# Without this, inst_memory and data_memory are black-boxed and
+# write-then-read properties become unprovable.
 # =============================================================================
 
-# -bbox_a 8192 prevents automatic black-boxing of memory arrays up to 8192 elements.
-# Without this, JasperGold black-boxes inst_memory and data_memory (VERI-9033),
-# making write-then-read properties unprovable.
 elaborate -top single_cycle_top -bbox_a 8192
 
 # =============================================================================
 # STEP 3: CLOCK AND RESET
-# Declare the primary clock and the active-low reset expression.
-# JasperGold uses these to define the sampling edge for all concurrent
-# assertions and to identify the initial state for k-induction.
 # =============================================================================
 
 clock clk
 reset -expression {!rst_n}
 
 # =============================================================================
-# STEP 4: PROOF CONFIGURATION
-# Set proof depth and time limit.
-# - For safety properties with no state depth > 5, bounded proof to depth 20
-#   is usually sufficient to find counterexamples.
-# - For full exhaustive proof (unbounded), JasperGold uses k-induction.
+# STEP 4: PROVE
+# prove -all runs synchronously and blocks until all proofs complete.
+# JasperGold prints the full SUMMARY table automatically on exit.
+# Session data (CEX waveforms, proof databases) is written to the
+# -proj directory: formal/sessions/single_cycle/
 # =============================================================================
 
 set_prove_time_limit 3600s
-
-# =============================================================================
-# STEP 5: PROVE ALL PROPERTIES
-# -bg runs proofs in background (parallel where resources allow).
-# JasperGold will produce: Proven / Bounded Proof / Falsified / Inconclusive.
-# =============================================================================
-
 prove -all
 
-# =============================================================================
-# STEP 6: REPORTS
-# prove -all (no -bg) blocks until all proofs complete.
-# JasperGold prints the full summary automatically on exit in batch mode.
-# =============================================================================
-
-puts "\n=== Formal verification complete. ==="
+puts "\n=== Formal verification complete. Session data in formal/sessions/single_cycle/ ==="
