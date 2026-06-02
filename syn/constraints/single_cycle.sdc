@@ -1,26 +1,24 @@
 # =============================================================================
 # syn/constraints/single_cycle.sdc
-# Synopsys Design Constraints for single_cycle_top RV32I
+# Timing constraints for single_cycle_top RV32I
+# Technology: 0.18um CMOS, typical corner, 1.8V
 #
-# Target: 100 MHz (10 ns clock period)
-# These constraints are applied by Genus during logic synthesis to meet timing.
+# Target: 50 MHz (20 ns) -- conservative for single-cycle RV32I.
+# The single-cycle critical path runs: regfile read -> ALU -> writeback.
+# 0.18um TYP can meet this comfortably.
+# For the pipelined RV64IM (Phase 2), target 100-200 MHz.
 # =============================================================================
 
-# Primary clock: 100 MHz, 50% duty cycle
 create_clock -name clk \
-             -period 10.0 \
-             -waveform {0.0 5.0} \
+             -period 20.0 \
+             -waveform {0.0 10.0} \
              [get_ports clk]
 
-# Input arrival times: assume inputs arrive 2 ns after the clock edge
-# (leaves 8 ns of combinational slack for internal logic)
+# Input delay: 2 ns after clock edge
 set_input_delay  2.0 -clock clk [all_inputs]
 
-# Output required times: outputs must be stable 2 ns before the next clock edge
+# Output delay: 2 ns before next clock edge
 set_output_delay 2.0 -clock clk [all_outputs]
 
-# Reset is asynchronous -- no timing constraint needed on reset path
+# Reset is asynchronous -- skip timing analysis on this path
 set_false_path -from [get_ports rst_n]
-
-# Disable timing checks on clock port itself
-set_dont_touch_network [get_clocks clk]

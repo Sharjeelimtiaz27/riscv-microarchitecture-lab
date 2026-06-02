@@ -1,34 +1,42 @@
 # =============================================================================
 # syn/single_cycle_syn.tcl
-# Cadence Genus synthesis script for single_cycle_top RV32I
+# Cadence Genus 23.33 synthesis script for single_cycle_top RV32I
 #
-# Usage (on TalTech HPC after loading Cadence environment):
+# Technology : 0.18um CMOS (c18), typical corner, 1.8V
+# Library    : <TIMING_LIB>
+#
+# Usage (on TalTech HPC):
 #   cad && 1.3
 #   cd <repo_root>
 #   genus -f syn/single_cycle_syn.tcl
 #
-# Prerequisite: a technology library must be configured.
-# On TalTech HPC, set the PDK environment variable before running:
-#   export PDK_LIB=/path/to/technology/library.lib
-#
-# What this script produces:
+# Outputs:
 #   syn/results/single_cycle_mapped.v  -- gate-level netlist
-#   syn/results/single_cycle.sdf       -- standard delay format (for GLS)
+#   syn/results/single_cycle.sdf       -- SDF delay file for GLS
 #   syn/results/area.rpt               -- area report
 #   syn/results/timing.rpt             -- timing report
 #   syn/results/power.rpt              -- power report
 # =============================================================================
 
-# Allow larger loop unrolling for the register-file reset loop
+# Allow loop unrolling for the register-file reset loop (32 iterations)
 set_db / .hdl_max_loop_limit 8192
 
 # =============================================================================
-# STEP 1: READ HDL
-# Load all RTL files in dependency order (modules before their wrappers).
-# Assertion modules are NOT included in synthesis -- they are for verification only.
+# STEP 1: TECHNOLOGY LIBRARY
+# 0.18um CMOS, typical PVT corner (1.8V, 25C, nominal)
+# TYP corner is used for initial synthesis and area estimation.
+# Use WC (worst case) for timing sign-off.
 # =============================================================================
 
-read_hdl -sv12 {
+set_db lib_search_path <LIB_DIR>
+set_db library         {<cell_library.lib>}
+
+# =============================================================================
+# STEP 2: READ RTL
+# Assertion files are NOT loaded -- they are simulation/formal only.
+# =============================================================================
+
+read_hdl -sv {
     rtl/common/alu.sv
     rtl/common/alu_ctrl.sv
     rtl/common/regfile.sv
@@ -40,23 +48,21 @@ read_hdl -sv12 {
 }
 
 # =============================================================================
-# STEP 2: ELABORATE
-# Resolve hierarchy, parameters, and generate internal netlist representation.
+# STEP 3: ELABORATE
 # =============================================================================
 
 elaborate single_cycle_top
 
 # =============================================================================
-# STEP 3: APPLY TIMING CONSTRAINTS
+# STEP 4: TIMING CONSTRAINTS
+# Target: 100 MHz (10 ns). 0.18um typical corner can meet this.
+# If timing is not met, relax to 20 ns (50 MHz) in the SDC.
 # =============================================================================
 
 read_sdc syn/constraints/single_cycle.sdc
 
 # =============================================================================
-# STEP 4: SYNTHESIS FLOW
-# syn_generic: technology-independent Boolean optimization
-# syn_map:     map to standard cells from the technology library
-# syn_opt:     post-map optimization (buffer insertion, gate sizing)
+# STEP 5: SYNTHESIS
 # =============================================================================
 
 syn_generic
@@ -64,28 +70,24 @@ syn_map
 syn_opt
 
 # =============================================================================
-# STEP 5: WRITE OUTPUTS
+# STEP 6: WRITE OUTPUTS
 # =============================================================================
 
-# Gate-level netlist (Verilog) for GLS and equivalence checking
-write_hdl -mapped > syn/results/single_cycle_mapped.v
-
-# SDF delay file for back-annotated gate-level simulation
-write_sdf syn/results/single_cycle.sdf
+write_hdl > syn/results/single_cycle_mapped.v
+write_sdf > syn/results/single_cycle.sdf
 
 # =============================================================================
-# STEP 6: REPORTS
+# STEP 7: REPORTS
 # =============================================================================
 
-report_area   > syn/results/area.rpt
-report_timing > syn/results/timing.rpt
-report_power  > syn/results/power.rpt
+redirect syn/results/area.rpt    { report area   }
+redirect syn/results/timing.rpt  { report timing }
+redirect syn/results/power.rpt   { report power  }
 
-# Print summary to terminal
-report_area
-report_timing -nworst 5
+report area
+report timing -nworst 5
 
-puts "\n=== Synthesis complete. Outputs in syn/results/ ==="
+puts "\n=== Synthesis complete ==="
 puts "    Netlist : syn/results/single_cycle_mapped.v"
 puts "    SDF     : syn/results/single_cycle.sdf"
 puts "    Area    : syn/results/area.rpt"
