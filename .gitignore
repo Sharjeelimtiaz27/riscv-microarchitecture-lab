@@ -12,9 +12,13 @@ waves.vcd
 *.diag
 
 # EDA tool scratch -- large, regenerable, tool-internal (do NOT commit)
-# JasperGold session databases
-formal/sessions/**/jgproject/
+# JasperGold session scratch: everything under a session dir except the .gitkeep
+# (jg -proj writes jg.log, jg.cmd, sessionLogs/, work.bak/, .tmp/ directly here)
+formal/sessions/*/*
+!formal/sessions/*/.gitkeep
 jgproject/
+# Cadence runtime timestamp
+.rs_*.tstamp
 # Genus formal-verification scratch and run logs
 fv/
 genus.log*
@@ -24,6 +28,14 @@ genus.cmd*
 innovus.log*
 innovus.cmd*
 *.rpt.gz
+# Backup files
+*.bak
+# cocotb / pyuvm simulation artifacts
+sim_build/
+results.xml
+xrun.log
+xrun.history
+xrun.key
 
 # Python
 __pycache__/
