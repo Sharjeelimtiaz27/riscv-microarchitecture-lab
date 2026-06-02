@@ -210,67 +210,226 @@ report_power  > syn/results/power.rpt
 
 ---
 
-## Part 5: Reading Synthesis Reports
+## Part 5: Reading Synthesis Reports -- Beginner Walkthrough
 
-### Area Report (area.rpt)
+You chose the library, you ran Genus, three report files appeared. Now what?
+This section teaches you to read each one, using the ACTUAL output from our
+first real synthesis run of single_cycle_top. Every number below is real.
 
-The area report shows how much silicon area the design uses, measured in standard cell equivalents or square microns depending on the PDK.
-
-Key fields:
+The reports live in `syn/results/`:
 ```
-Total Cell Area:     1234.56 um^2    -- total area of all standard cells
-Combinational Area:   890.12 um^2    -- area of logic (AND, OR, MUX gates)
-Sequential Area:      344.44 um^2    -- area of flip-flops and latches
-Net Area:             (wire area -- available in some flows)
-```
-
-What to look for:
-- Is the sequential area dominated by the register file? (32 x 32-bit = 1024 flip-flops -- expect it to be large)
-- Is the combinational area dominated by the ALU? (32-bit adder and shifter are large)
-- Are there unexpectedly large sections? (could indicate unintended logic replication)
-
-### Timing Report (timing.rpt)
-
-Shows the critical path: the longest combinational path through the design that determines the maximum clock frequency.
-
-```
-Startpoint: single_cycle_top/rf/regs_reg[5][0]   (flip-flop clocked by clk)
-Endpoint:   single_cycle_top/rf/regs_reg[7][31]   (flip-flop clocked by clk)
-
-Path Group: clk
-Path Type:  max
-
-Point                           Incr     Path
------------------------------------------------
-clock clk (rise edge)           0.00     0.00
-...
-rf/regs_reg[5][0]/CK            0.00     0.50    # clock to Q delay
-alu_i/result[31]                1.23     1.73    # ALU propagation
-rf/rd_data1[31]                 0.45     2.18    # register file read
-...
-Data Arrival Time                         7.82
------------------------------------------------
-clock clk (rise edge)          10.00    10.00
-clock uncertainty              -0.10     9.90
-library setup time             -0.15     9.75
-Data Required Time                        9.75
------------------------------------------------
-Slack (MET)                               1.93   # POSITIVE = timing met
+area.rpt     -- how big is the design (silicon area)
+timing.rpt   -- is it fast enough (does it meet the clock)
+power.rpt    -- how much energy does it use
 ```
 
-- **Slack > 0:** Timing MET. The design meets the 10 ns constraint.
-- **Slack < 0:** Timing VIOLATED. The critical path is longer than the clock period.
-- The critical path for single_cycle_top will run through: register file read → ALU computation → writeback → register file write. The ALU is typically the bottleneck.
+### 5.1 -- The Area Report
 
-### Power Report (power.rpt)
-
+This was our real area.rpt:
 ```
-Dynamic Power:   0.45 mW   -- switching activity power
-Static Power:    0.12 mW   -- leakage power when not switching
-Total Power:     0.57 mW
+    Instance     Module  Cell-Count  Cell-Area  Net-Area   Total-Area     Wireload
+--------------------------------------------------------------------------------------
+single_cycle_top NA              59   2839.334   633.043     3472.378 <wireload> (S)
 ```
 
-Dynamic power scales with clock frequency and switching activity. Static power scales with temperature and process node.
+Read it column by column:
+
+| Column | Our value | What it means |
+|--------|-----------|---------------|
+| Cell-Count | 59 | Number of standard cells (gates + flip-flops) used |
+| Cell-Area | 2839.334 | Area of the logic cells, in um^2 |
+| Net-Area | 633.043 | Estimated area of the wires connecting them, in um^2 |
+| Total-Area | 3472.378 | Cell + Net area = total silicon footprint |
+| Wireload | <wireload> | The model Genus used to estimate wire delay before P&R |
+
+The `(S)` means Genus auto-selected the wireload model.
+
+**How to sanity-check area:** ask yourself "does this number make sense for what
+I designed?" A full RV32I single-cycle core with a 32-entry register file should
+be LARGE -- the register file alone is 32 registers x 32 bits = 1024 flip-flops,
+and one flip-flop is roughly 10-15 um^2 in this 0.18um process. So the register
+file alone should be ~10000-15000 um^2.
+
+Our total was only 3472 um^2. **That is a red flag.** It is far too small for a
+full core. This number alone tells us something is missing -- which leads to the
+diagnostic in Part 5.4 below.
+
+### 5.2 -- The Timing Report
+
+This was our real critical path (trimmed):
+```
+Path 1: MET (15745 ps) Setup Check with Pin pc_i_pc_reg[31]/CP->D
+          Group: clk
+     Startpoint: (R) pc_i_pc_reg[2]/CP
+       Endpoint: (R) pc_i_pc_reg[31]/D
+
+        Clock Edge:+   20000            0
+           Arrival:=   20000            0
+             Setup:-     162
+     Required Time:=   19838
+         Data Path:-    4093
+             Slack:=   15745
+
+  pc_i_pc_reg[2]/Q             <DFF>     308    308    (clock-to-Q of source flop)
+  inc_add_126_23_g553__2398/CO <HADD>      147    455    (carry through PC+4 adder)
+  inc_add_126_23_g552__5477/CO <HADD>      128    583
+  ... (more half-adder stages) ...
+```
+
+Read it top-down:
+
+| Line | Our value | Meaning |
+|------|-----------|---------|
+| MET / VIOLATED | MET | Did this path pass timing? MET = yes |
+| Startpoint | pc_i_pc_reg[2] | The flip-flop where the path BEGINS (launch) |
+| Endpoint | pc_i_pc_reg[31] | The flip-flop where the path ENDS (capture) |
+| Clock Edge | 20000 ps | Our clock period (20 ns = 50 MHz from the SDC) |
+| Setup | 162 ps | Time the capture flop needs data stable before the edge |
+| Required Time | 19838 ps | Deadline for data to arrive (20000 - 162) |
+| Data Path | 4093 ps | How long the logic ACTUALLY takes |
+| **Slack** | **15745 ps** | Required - Arrival. POSITIVE = passed, with margin |
+
+**The golden rule of timing:**
+```
+Slack = Required Time - Data Path Delay
+Slack > 0  ->  MET     (design runs at this clock speed)
+Slack < 0  ->  VIOLATED (design is too slow, must fix)
+```
+
+**Reading the path stages:** each row is one gate the signal passes through.
+- `pc_i_pc_reg[2]/Q` -- the signal leaves PC bit 2 (<DFF> is a D flip-flop cell)
+- `inc_add_126_..._CO` -- it ripples through the PC+4 incrementer. CO = carry out.
+  <HADD> = half-adder cell. You can literally see the carry chain rippling bit by bit.
+- The path ends at `pc_i_pc_reg[31]/D` -- the D input of PC bit 31.
+
+So this path is: **PC -> (PC + 4 adder) -> PC**. The whole 30-bit increment takes
+4093 ps. With a 20000 ps clock, this could actually run at 1/4093ps = ~244 MHz.
+We have enormous headroom. If we wanted, we could tighten the clock to 5 ns.
+
+**`report timing -nworst 5`** prints the 5 slowest paths. If path 1 passes, all
+others pass too (they are faster). Always look at path 1 first.
+
+### 5.3 -- The Power Report
+
+```
+Dynamic Power:   (switching) -- power burned every time a signal toggles 0<->1
+Static Power:    (leakage)   -- power burned just by being powered on
+Total Power:     Dynamic + Static
+```
+
+- **Dynamic power** scales with clock frequency and how much activity there is.
+  Faster clock = more toggles per second = more dynamic power.
+- **Static (leakage) power** is constant -- transistors leak a tiny current even
+  when idle. It scales with temperature and gets worse at smaller process nodes.
+
+For a tiny design at 50 MHz in 0.18um, total power will be well under 1 mW.
+Power matters most for battery devices and large chips; for our learning core it
+is informational.
+
+### 5.4 -- Reading the WARNINGS (this is where bugs hide)
+
+The reports tell you what WAS built. The **synthesis log** (the text that scrolls
+during the run) tells you what went WRONG. Beginners ignore warnings. Experienced
+engineers read them first. Here are the ones from our real run and what they meant:
+
+**Warning 1 -- undriven signals (the smoking gun):**
+```
+ELABUTL-125  Warning  256  Undriven signal detected.
+```
+256 signals had nothing driving them. These were the bits of `inst_memory` and
+`data_memory` -- the memory arrays. This warning is the first clue that the
+memories did not synthesize as normal logic.
+
+**Warning 2 -- deleted logic:**
+```
+GLO-34  Deleting instances not driving any primary outputs.
+```
+Genus removed logic that did not connect to any output port. (This is what gave
+us a completely EMPTY netlist on the very first run, before we added the debug
+output ports.)
+
+**Warning 3 -- SDC command not understood:**
+```
+SDC-202  Error  Could not interpret SDC command.
+```
+One line in our SDC file (`set_dont_touch_network`) was a Synopsys DC command
+that Genus does not support. The constraint was silently skipped. Always grep the
+log for `SDC-202` to catch constraints that did not apply.
+
+**Warning 4 -- ignored simulation constructs:**
+```
+VLOGPT-37  Warning  Ignoring unsynthesizable construct.
+   - initial block, $readmemh, etc.
+```
+Expected and harmless. `initial` blocks and `$readmemh` are simulation-only.
+Synthesis correctly ignores them. Real silicon has no "initial" -- that is why
+proper reset logic exists.
+
+### 5.5 -- The Diagnostic Skill: "30 flops is wrong"
+
+This is the most important habit to learn. After synthesis, do not just accept
+the result -- **predict what you SHOULD see, then check.**
+
+Our design has:
+- A 32-bit PC -> 32 flip-flops
+- A 32 x 32-bit register file -> 1024 flip-flops
+- Expected total: ~1056 flip-flops, area in the tens of thousands of um^2
+
+We counted the flip-flops in the netlist:
+```bash
+grep -c <FF_PREFIX> syn/results/single_cycle_mapped.v
+```
+and found about **30**. The PC is 32 bits, but `pc[1:0]` are always 00 (4-byte
+aligned), so Genus optimized those 2 constant bits away -> 30 flops. That means
+**only the PC survived. The entire 1024-flop register file is missing.**
+
+Why? The chain of reasoning:
+1. The memories were black-boxed (Warning 1: 256 undriven signals).
+2. A black-boxed memory has undefined outputs, so `instr` got tied to 0.
+3. `instr = 0` -> every decoded field (opcode, rd, rs1, rs2) = 0.
+4. opcode = 0 -> control logic sets reg_write = 0, all control = 0.
+5. Register file never written, always reads x0 = 0 -> folds to constant 0.
+6. ALU inputs all 0 -> output 0 -> wb_data = 0.
+
+Inspecting the actual netlist confirmed every downstream signal collapsed:
+```verilog
+assign dbg_wb_data[0..31] = 1'b0;   // entire writeback = ZERO
+assign dbg_rd[0..4]       = 1'b0;   // destination register = ZERO
+assign dbg_reg_write      = 1'b0;   // write enable = ZERO
+assign dbg_instr[...]     = 1'b0;   // instruction = ZERO
+```
+Only `dbg_pc` and its `inc_add` (PC+4) incrementer were real logic. The PC
+survived because it is a self-contained loop (pc -> +4 -> pc) that does not
+depend on the memory output. The instruction memory feeds the ENTIRE rest of
+the processor, so tying it to 0 deletes everything downstream.
+
+**This is the real lesson:** the area report said "3472 um^2" and the tool
+reported SUCCESS. Nothing crashed. But the design was wrong -- most of it was
+silently missing. Only by predicting "I should have ~1056 flops" and checking
+"I only got 30" did we catch it. A report that says PASS does not mean your
+design is correct. You must read the numbers against your own expectation.
+
+**The fix** is core/memory separation (Part 7): synthesize the core logic and
+treat the memories as external SRAM macros, exactly as real chips do.
+
+### 5.6 -- Quick commands to inspect any netlist
+
+```bash
+# Count flip-flops (<FF_PREFIX> = D flip-flop cells in the library)
+grep -c <FF_PREFIX> syn/results/single_cycle_mapped.v
+
+# Count total cell instances
+grep -cE "X[0-9]" syn/results/single_cycle_mapped.v
+
+# See which named sub-blocks survived
+grep -iE "alu|regfile|imm|add" syn/results/single_cycle_mapped.v | head
+
+# Look for the worst timing path only
+grep -A 30 "Path 1:" syn/results/timing.rpt
+
+# Find any SDC commands that failed to apply
+grep -i "SDC-202\|SDC-204\|failed" <synthesis log>
+```
 
 ---
 
@@ -310,6 +469,79 @@ genus -f syn/single_cycle_syn.tcl
 ```
 
 On TalTech HPC, the PDK path depends on which library is available. Check with your lab administrator.
+
+---
+
+## Part 6a: Core/Memory Separation -- The Real Fix
+
+The "30 flops" diagnosis (Part 5.5) showed that embedding memories inside the
+synthesized module collapses the datapath. The professional fix is **core/memory
+separation**, which is how every real processor is built.
+
+### The principle
+
+In a real chip, the processor CORE (control + datapath logic) and the MEMORIES
+(SRAM) are physically different things:
+- The core is **random logic** -- synthesized to standard cells by Genus.
+- The memories are **SRAM macros** -- dense pre-built arrays from a memory
+  compiler, dropped in during floorplanning, NOT synthesized as logic.
+
+So the core should never contain the memories. Instead it exposes a memory
+**interface** (address out, data in) and the memories connect through those ports.
+
+### Two module roles in this project
+
+| Module | Contains memories? | Used for |
+|--------|-------------------|----------|
+| `single_cycle_top` | Yes (inst_memory + data_memory inside) | Simulation, pyuvm, formal |
+| `single_cycle_core` | No (memory ports only) | Synthesis, place-and-route |
+
+`single_cycle_top` stays exactly as it is -- it is the verified simulation and
+formal target, and the testbench preloads its instruction memory from a hex file.
+`single_cycle_core` is the synthesis target: identical datapath, but the two
+memories are replaced by port connections.
+
+### The core memory interface
+
+```systemverilog
+module single_cycle_core (
+  input  logic        clk,
+  input  logic        rst_n,
+  // Instruction memory interface
+  output logic [31:0] imem_addr,    // = PC          (drive address OUT)
+  input  logic [31:0] imem_rdata,   // = instruction (take data IN)
+  // Data memory interface
+  output logic [31:0] dmem_addr,    // = ALU result
+  output logic [31:0] dmem_wdata,   // = store data
+  output logic        dmem_we,      // = write enable
+  output logic        dmem_re,      // = read enable
+  input  logic [31:0] dmem_rdata,   // = load data
+  // debug outputs ...
+);
+```
+
+### Why this synthesizes fully
+
+`imem_rdata` and `dmem_rdata` are primary **input ports**. Synthesis treats input
+ports as free, externally driven signals -- they are NOT tied to 0 like a
+black-boxed memory output. So:
+- `instr = imem_rdata` is a real driven signal
+- the decoder, register file, ALU, and immediate generator all stay alive
+- nothing collapses to constant 0
+
+The full datapath is preserved, and you get a realistic cell count and a real
+critical path through the regfile-read -> ALU -> writeback logic.
+
+### Running the core synthesis
+
+```bash
+genus -f syn/single_cycle_core_syn.tcl
+cat syn/results/core_area.rpt
+grep -c <FF_PREFIX> syn/results/single_cycle_core_mapped.v   # expect ~1056, not 30
+```
+
+The core synthesis script reads only the core sub-modules (alu, alu_ctrl,
+regfile, pc, immgen, single_cycle_core) -- NOT inst_memory or data_memory.
 
 ---
 
