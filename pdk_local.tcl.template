@@ -1,0 +1,41 @@
+# =============================================================================
+# pdk_local.tcl.template
+#
+# This is a TEMPLATE. Copy it to pdk_local.tcl and fill in the real values for
+# YOUR process design kit (PDK). pdk_local.tcl is git-ignored on purpose: it
+# holds vendor/foundry paths and names that are under a commercial/NDA license
+# and MUST NOT be committed to a public repository.
+#
+#   cp pdk_local.tcl.template pdk_local.tcl
+#   # then edit pdk_local.tcl with your real PDK paths/names
+#
+# Both the synthesis scripts (syn/*.tcl) and the place-and-route script
+# (pnr/innovus_single_cycle.tcl) "source" this file, so the confidential
+# values live in exactly one place and never appear in tracked files.
+#
+# WHAT EACH VALUE IS (generic explanation -- safe to read):
+#   - A Liberty (.lib) timing library: per-cell delay/area/power model.
+#   - A technology LEF: defines the metal routing layers and via rules.
+#   - A standard-cell LEF: the physical shape/pins of each logic gate.
+#   - A placement "site": the unit grid that standard cells snap onto.
+#   - Power/ground pin names: how cells are named for VDD/VSS connection.
+#   - Horizontal/vertical top metals: thick layers used for the power grid.
+# =============================================================================
+
+# ---- Synthesis (Genus) ----
+set PDK_LIB_SEARCH   "<path to the directory that contains your Liberty .lib>"
+set PDK_LIBERTY      "<your_standard_cell_library.lib>"
+
+# ---- Place & Route (Innovus) ----
+set PDK_TIMING_LIB   "<full path to your Liberty .lib>"
+set PDK_TECH_LEF     "<full path to your technology LEF>"
+set PDK_CELL_LEF     "<full path to your standard-cell LEF>"
+set PDK_SITE         "<placement site name, found in the cell LEF (SITE ...)>"
+set PDK_PWR_PIN      "<cell power pin name, e.g. VDD or <VDD_PIN>>"
+set PDK_GND_PIN      "<cell ground pin name, e.g. VSS or <GND_PIN>>"
+
+# Top metals for the power distribution network. Pick one horizontal-preferred
+# routing layer and one vertical-preferred routing layer (read the tech LEF:
+# each LAYER ... ROUTING has a DIRECTION). Use the thick upper metals.
+set PDK_HMETAL       "<horizontal top metal layer name>"
+set PDK_VMETAL       "<vertical top metal layer name>"

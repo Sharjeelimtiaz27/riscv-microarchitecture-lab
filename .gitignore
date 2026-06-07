@@ -45,3 +45,18 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# =============================================================================
+# CONFIDENTIAL / COMMERCIAL-LICENSE (NDA) -- NEVER COMMIT
+# The local PDK config holds foundry/vendor paths and library names.
+pdk_local.tcl
+# Foundry-mapped artifacts embed licensed cell names and characterized timing
+# (gate-level netlists, SDF delays, area/timing/power reports). They are
+# regenerable on the HPC from RTL; keep them out of the public repo.
+syn/results/*
+!syn/results/.gitkeep
+pnr/results/*
+!pnr/results/.gitkeep
+
+# Claude Code local session dir
+.claude/

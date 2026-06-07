@@ -49,22 +49,22 @@ That answer comes from the **standard cell library** -- the `.lib` (Liberty) fil
 
 ### What a standard cell library actually contains
 
-A standard cell library is a catalog, provided by the chip foundry, describing every pre-designed logic gate available in that manufacturing process. For each cell (e.g. a 2-input AND gate `AND2`), the `.lib` file lists:
+A standard cell library is a catalog, provided by the chip foundry, describing every pre-designed logic gate available in that manufacturing process. For each cell (e.g. a 2-input AND gate, typically named something like `AND2`), the `.lib` file lists (the numbers below are illustrative -- the real values are specific to your licensed library):
 
 | Information | Example | Why Genus needs it |
 |-------------|---------|-------------------|
 | Logic function | `Z = A & B` | To know what the cell does |
-| Area | 9.3 um^2 | To minimize total chip size |
-| Input-to-output delay | 82 ps | To meet your clock period |
-| Input capacitance | 4.6 fF | To compute loading on driving cells |
-| Power per switch | 0.01 pW | To estimate power consumption |
-| Drive strength variants | base cell + drive-strength variants | Bigger versions drive more load faster |
+| Area | ~10 um^2 (illustrative) | To minimize total chip size |
+| Input-to-output delay | ~80 ps (illustrative) | To meet your clock period |
+| Input capacitance | ~5 fF (illustrative) | To compute loading on driving cells |
+| Power per switch | tiny (illustrative) | To estimate power consumption |
+| Drive strength variants | base cell + larger `...X2`, `...X4` versions | Bigger versions drive more load faster |
 
-Our run loaded `<cell_library.lib>` and the log reported:
+When Genus loads the library it reports how many cells are available, e.g.:
 ```
 domain _default_: <N> combo usable cells and <M> sequential usable cells
 ```
-That means the library gives Genus **377 combinational gates** and **81 flip-flop/latch types** to build the processor from. That is its entire alphabet.
+That means the library gives Genus a few hundred combinational gates and several dozen flip-flop/latch types to build the processor from. That is its entire alphabet. (The exact cell names, counts, and per-cell numbers belong to your licensed PDK and are not reproduced here.)
 
 ### The mental model: synthesis is translation
 
@@ -79,13 +79,13 @@ A translator with no dictionary produces nothing. That is exactly why our first 
 
 ### Why the foundry, not Cadence, provides the library
 
-This is a subtle but important point. Cadence makes the **tool** (Genus). But the **library** describes physical transistors that only exist in a specific factory's manufacturing process. Only the foundry (TSMC, GlobalFoundries, Intel, Samsung) knows:
+This is a subtle but important point. Cadence makes the **tool** (Genus). But the **library** describes physical transistors that only exist in a specific factory's manufacturing process. Only the foundry (e.g. TSMC, GlobalFoundries, Intel, Samsung) knows:
 
 - How fast their transistors switch
 - How much area each gate occupies on their wafer
 - How much current each gate leaks
 
-So the foundry characterizes their cells and ships the `.lib` file. Cadence's tool reads it. This separation is why the same RTL can be synthesized to a TSMC 28nm chip or an 180nm chip just by swapping the library -- the RTL never changes, only the target "dictionary" does.
+So the foundry characterizes their cells and ships the `.lib` file. Cadence's tool reads it. This separation is why the same RTL can be synthesized to a 28nm chip or a 180nm chip just by swapping the library -- the RTL never changes, only the target "dictionary" does.
 
 ### FPGA vs ASIC library summary
 
@@ -101,12 +101,13 @@ So the foundry characterizes their cells and ships the `.lib` file. Cadence's to
 
 ### What this means for our project
 
-This is why our synthesis script begins with:
+This is why our synthesis script begins by pointing Genus at the library (the real
+paths live in the git-ignored `pdk_local.tcl`, never committed):
 ```tcl
-set_db lib_search_path <LIB_DIR>
-set_db library         {<cell_library.lib>}
+set_db lib_search_path $PDK_LIB_SEARCH   ;# directory holding the .lib
+set_db library         [list $PDK_LIBERTY]  ;# the Liberty file name
 ```
-Those two lines hand Genus its alphabet (0.18um cells at the typical corner). Everything after -- `read_hdl`, `elaborate`, `syn_generic`, `syn_map` -- depends on that alphabet existing. The `syn_map` stage in particular is the moment Genus replaces your abstract logic with real cells picked from this library.
+Those two lines hand Genus its alphabet (the 0.18um cells at the typical corner). Everything after -- `read_hdl`, `elaborate`, `syn_generic`, `syn_map` -- depends on that alphabet existing. The `syn_map` stage in particular is the moment Genus replaces your abstract logic with real cells picked from this library.
 
 ---
 
@@ -240,7 +241,7 @@ Read it column by column:
 | Cell-Area | 2839.334 | Area of the logic cells, in um^2 |
 | Net-Area | 633.043 | Estimated area of the wires connecting them, in um^2 |
 | Total-Area | 3472.378 | Cell + Net area = total silicon footprint |
-| Wireload | <wireload> | The model Genus used to estimate wire delay before P&R |
+| Wireload | `<wireload>` | The model Genus used to estimate wire delay before P&R |
 
 The `(S)` means Genus auto-selected the wireload model.
 
@@ -271,8 +272,8 @@ Path 1: MET (15745 ps) Setup Check with Pin pc_i_pc_reg[31]/CP->D
              Slack:=   15745
 
   pc_i_pc_reg[2]/Q             <DFF>     308    308    (clock-to-Q of source flop)
-  inc_add_126_23_g553__2398/CO <HADD>      147    455    (carry through PC+4 adder)
-  inc_add_126_23_g552__5477/CO <HADD>      128    583
+  inc_add_126_23_g553__2398/CO <HADD>    147    455    (carry through PC+4 adder)
+  inc_add_126_23_g552__5477/CO <HADD>    128    583
   ... (more half-adder stages) ...
 ```
 
@@ -297,9 +298,9 @@ Slack < 0  ->  VIOLATED (design is too slow, must fix)
 ```
 
 **Reading the path stages:** each row is one gate the signal passes through.
-- `pc_i_pc_reg[2]/Q` -- the signal leaves PC bit 2 (<DFF> is a D flip-flop cell)
+- `pc_i_pc_reg[2]/Q` -- the signal leaves PC bit 2 (the cell is a D flip-flop)
 - `inc_add_126_..._CO` -- it ripples through the PC+4 incrementer. CO = carry out.
-  <HADD> = half-adder cell. You can literally see the carry chain rippling bit by bit.
+  The cell is a half-adder. You can literally see the carry chain rippling bit by bit.
 - The path ends at `pc_i_pc_reg[31]/D` -- the D input of PC bit 31.
 
 So this path is: **PC -> (PC + 4 adder) -> PC**. The whole 30-bit increment takes
@@ -415,10 +416,12 @@ treat the memories as external SRAM macros, exactly as real chips do.
 ### 5.6 -- Quick commands to inspect any netlist
 
 ```bash
-# Count flip-flops (<FF_PREFIX> = D flip-flop cells in the library)
+# Count flip-flops. Replace <FF_PREFIX> with your library's flip-flop cell
+# prefix (look at any instance line in the netlist to find it).
 grep -c <FF_PREFIX> syn/results/single_cycle_mapped.v
 
-# Count total cell instances
+# Count total cell instances (most cells end with a drive-strength suffix
+# like X1, X2, X4 -- adjust the pattern to your library if needed)
 grep -cE "X[0-9]" syn/results/single_cycle_mapped.v
 
 # See which named sub-blocks survived
@@ -579,7 +582,7 @@ If Conformal FAILS: synthesis introduced a functional mismatch. This is rare but
 |------|--------|
 | syn/single_cycle_syn.tcl written | Done |
 | syn/constraints/single_cycle.sdc written | Done |
-| 0.18um library located and configured (<cell_library>) | Done |
+| 0.18um standard-cell library located and configured | Done |
 | First synthesis attempt (single_cycle_top) | Done -- empty/30-flop, diagnosed |
 | Root cause found: memories black-boxed, datapath collapsed | Done |
 | single_cycle_core.sv created (memory port interface) | Done |

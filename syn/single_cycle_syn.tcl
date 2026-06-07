@@ -2,13 +2,13 @@
 # syn/single_cycle_syn.tcl
 # Cadence Genus 23.33 synthesis script for single_cycle_top RV32I
 #
-# Technology : 0.18um CMOS (c18), typical corner, 1.8V
-# Library    : <TIMING_LIB>
+# Technology : 0.18um CMOS standard-cell process, typical corner
+# Library    : supplied via pdk_local.tcl (git-ignored; commercial/NDA PDK)
 #
-# Usage (on TalTech HPC):
+# Usage (on the HPC, from the repo root):
 #   cad && 1.3
-#   cd <repo_root>
 #   genus -f syn/single_cycle_syn.tcl
+#   (pdk_local.tcl must exist -- see pdk_local.tcl.template)
 #
 # Outputs:
 #   syn/results/single_cycle_mapped.v  -- gate-level netlist
@@ -23,13 +23,19 @@ set_db / .hdl_max_loop_limit 8192
 
 # =============================================================================
 # STEP 1: TECHNOLOGY LIBRARY
-# 0.18um CMOS, typical PVT corner (1.8V, 25C, nominal)
+# 0.18um CMOS, typical PVT corner (nominal voltage, 25C).
 # TYP corner is used for initial synthesis and area estimation.
 # Use WC (worst case) for timing sign-off.
+# Paths come from the git-ignored local PDK config (pdk_local.tcl).
 # =============================================================================
 
-set_db lib_search_path <LIB_DIR>
-set_db library         {<cell_library.lib>}
+if {![file exists pdk_local.tcl]} {
+    puts "ERROR: pdk_local.tcl not found. Copy pdk_local.tcl.template and fill it in."
+    exit 1
+}
+source pdk_local.tcl
+set_db lib_search_path $PDK_LIB_SEARCH
+set_db library         [list $PDK_LIBERTY]
 
 # =============================================================================
 # STEP 2: READ RTL
@@ -62,7 +68,7 @@ set_db / .delete_unloaded_seqs  false
 
 # =============================================================================
 # STEP 4: TIMING CONSTRAINTS
-# Target: 100 MHz (10 ns). 0.18um typical corner can meet this.
+# Target: 100 MHz (10 ns). The 0.18um typical corner can meet this.
 # If timing is not met, relax to 20 ns (50 MHz) in the SDC.
 # =============================================================================
 

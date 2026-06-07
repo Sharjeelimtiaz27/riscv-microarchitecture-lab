@@ -7,13 +7,13 @@
 # therefore produces only the PC (the memories black-box and collapse the
 # datapath to constant 0).
 #
-# Technology : 0.18um CMOS (c18), typical corner, 1.8V
-# Library    : <TIMING_LIB>
+# Technology : 0.18um CMOS standard-cell process, typical corner
+# Library    : supplied via pdk_local.tcl (git-ignored; commercial/NDA PDK)
 #
-# Usage (on TalTech HPC):
+# Usage (on the HPC, from the repo root):
 #   cad && 1.3
-#   cd <repo_root>
 #   genus -f syn/single_cycle_core_syn.tcl
+#   (pdk_local.tcl must exist -- see pdk_local.tcl.template)
 #
 # Outputs (in syn/results/):
 #   single_cycle_core_mapped.v  -- gate-level netlist
@@ -23,9 +23,14 @@
 
 set_db / .hdl_max_loop_limit 8192
 
-# Technology library: 0.18um, typical corner
-set_db lib_search_path <LIB_DIR>
-set_db library         {<cell_library.lib>}
+# Technology library paths come from the git-ignored local PDK config.
+if {![file exists pdk_local.tcl]} {
+    puts "ERROR: pdk_local.tcl not found. Copy pdk_local.tcl.template and fill it in."
+    exit 1
+}
+source pdk_local.tcl
+set_db lib_search_path $PDK_LIB_SEARCH
+set_db library         [list $PDK_LIBERTY]
 
 # Read core RTL + its sub-modules. NO inst_memory, NO data_memory --
 # they are external to the core and connected through ports.
