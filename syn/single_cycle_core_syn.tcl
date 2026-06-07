@@ -32,6 +32,13 @@ source pdk_local.tcl
 set_db lib_search_path $PDK_LIB_SEARCH
 set_db library         [list $PDK_LIBERTY]
 
+# Do NOT use scan flip-flops. This is not a DFT/test flow, so we want plain
+# functional flops. Without this, Genus maps to scan flops (with SE/SI/SO test
+# pins); Innovus then aborts placement with IMPSP-9099 ("scan chains exist but
+# are not defined") because no scan chain was stitched. Plain flops are slightly
+# larger but flow cleanly through place-and-route.
+set_db use_scan_seqs_for_non_dft false
+
 # Read core RTL + its sub-modules. NO inst_memory, NO data_memory --
 # they are external to the core and connected through ports.
 read_hdl -sv {
