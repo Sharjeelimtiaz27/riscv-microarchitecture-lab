@@ -576,6 +576,61 @@ If Conformal FAILS: synthesis introduced a functional mismatch. This is rare but
 
 ---
 
+## Scan Flip-Flops: a Synthesis Choice That Bites in P&R
+
+This is a lesson we learned the hard way during Week 05 place-and-route, but the
+*cause* is a synthesis decision — so it belongs here.
+
+### What a scan flop is
+
+By default, Genus maps your flip-flops to **scan flip-flops**: ordinary flops with
+extra pins (`SE` scan-enable, `SI` scan-in, `SO` scan-out). These pins exist for
+**DFT (Design For Test)**. After a chip is fabricated, you cannot probe internal
+nodes directly. Instead, all flops are wired into one giant shift register (a
+"scan chain"); you shift a known pattern in, pulse the clock once, and shift the
+result out to check that every flop and the logic between them works. It is how
+real chips are tested at the factory.
+
+Genus prefers scan flops because the library's scan flop is often the
+area-efficient default sequential cell.
+
+### Why it broke place-and-route
+
+Our netlist was full of scan flops, but we never **defined the scan chain** (the
+order in which the flops are stitched together). When Innovus tried to place the
+design, it aborted:
+
+```
+**ERROR (IMPSP-9099): Scan chains exist in this design but are not defined for 50.10% flops.
+```
+
+Innovus sees scan-capable flops with no defined chain and refuses to place them,
+because choosing the wrong physical order would ruin the chip's testability.
+
+### The fix (at synthesis)
+
+We are not doing a DFT/test flow, so we simply tell Genus **not** to use scan
+flops. One line, added before reading the RTL:
+
+```tcl
+set_db use_scan_seqs_for_non_dft false
+```
+
+This makes Genus emit plain functional flip-flops (a little larger, since they
+lack the shared scan structure — our cell count went from 3421 to 4414). The
+re-synthesized netlist then flows cleanly through place-and-route: the hard error
+becomes a harmless note (`IMPSP-9025: No scan chain specified/traced`).
+
+### The takeaway
+
+A synthesis setting you never think about can stop physical design cold three
+steps later. If you are building a real test-ready chip, you would instead
+**define the scan chain** (via a scan DEF or `specifyScanChain` in Innovus). For
+a learning flow, disabling scan flops at synthesis is the clean shortcut. See
+`docs/weekly_notebooks/week05_pnr.md` (War story #5) for the P&R side of this story.
+
+---
+
 ## Progress Tracker (Synthesis)
 
 | Task | Status |

@@ -105,50 +105,53 @@ checkPlace
 optDesign -preCTS
 
 # =============================================================================
-# STEP 6: CLOCK TREE SYNTHESIS (CTS)
+# STEP 6: CLOCK TREE SYNTHESIS (CTS) + post-CTS optimization
+# On a PODv2 database use clock_opt_design (the older create_clock_tree_spec /
+# ccopt_design fail with IMPCCOPT-2440). clock_opt_design builds the balanced
+# clock tree AND runs post-CTS optimization (setup + hold) in one command.
 # =============================================================================
 
-create_clock_tree_spec
-ccopt_design
+clock_opt_design
 
 # =============================================================================
-# STEP 7: POST-CTS HOLD FIX
-# =============================================================================
-
-optDesign -postCTS -hold
-
-# =============================================================================
-# STEP 8: ROUTING
+# STEP 7: ROUTING
+# Note: the router is the camelCase routeDesign (route_design is NOT a command).
 # =============================================================================
 
 routeDesign
 checkRoute
 
 # =============================================================================
-# STEP 9: POST-ROUTE OPTIMIZATION
+# STEP 8: POST-ROUTE OPTIMIZATION
+# Final timing closure with real routed-wire delays (setup, then hold).
 # =============================================================================
 
 optDesign -postRoute
 optDesign -postRoute -hold
 
 # =============================================================================
-# STEP 10: REPORTS
+# STEP 9: REPORTS
 # =============================================================================
 
-report_timing -path_type full -slack_lesser_than 0 > pnr/results/timing_violations.rpt
 report_area > pnr/results/area.rpt
-report_timing -nworst 1 -path_type summary
+report_timing -nworst 10 > pnr/results/timing_postroute.rpt
+report_timing -nworst 1                 ;# worst post-route slack to the console
 
 # =============================================================================
-# STEP 11: WRITE FINAL OUTPUTS
+# STEP 10: WRITE FINAL OUTPUTS
+# Use the legacy writers (saveNetlist / defOut); the common-UI write_netlist
+# -top_module_only and write_def options were rejected on this version.
+# saveDesign writes a full, self-contained, restorable database.
 # =============================================================================
 
-write_netlist -top_module_only pnr/results/single_cycle_final.v
-write_def pnr/results/single_cycle_final.def
+saveNetlist pnr/results/single_cycle_final.v
+defOut -routing pnr/results/single_cycle_final.def
 write_sdf pnr/results/single_cycle_postroute.sdf
+saveDesign pnr/results/single_cycle_routed.enc
 
 puts "\n=== Place and route complete. Outputs in pnr/results/ ==="
-puts "    Netlist : pnr/results/single_cycle_final.v"
-puts "    DEF     : pnr/results/single_cycle_final.def"
-puts "    SDF     : pnr/results/single_cycle_postroute.sdf"
-puts "    Timing  : pnr/results/timing_violations.rpt"
+puts "    Netlist     : pnr/results/single_cycle_final.v"
+puts "    DEF         : pnr/results/single_cycle_final.def"
+puts "    SDF         : pnr/results/single_cycle_postroute.sdf"
+puts "    Saved design: pnr/results/single_cycle_routed.enc(.dat)"
+puts "    Timing      : pnr/results/timing_postroute.rpt"

@@ -1,285 +1,400 @@
-# Week 05 -- Place and Route: Innovus Flow, Physical Design Concepts, and Reports
+# Week 05 — Place & Route: From a Synthesized Netlist to a Routed Chip (Cadence Innovus)
 
-**Focus:** Taking the synthesized gate-level netlist through physical implementation using Cadence Innovus. Understanding floorplanning, power planning, placement, clock tree synthesis, routing, and output verification.
+**Focus:** Taking the gate-level netlist from synthesis all the way to a physically placed, clock-tree-built, and routed layout using Cadence Innovus — done **live, step by step, in the GUI**, with every error explained.
 
-**Prerequisite:** Genus synthesis of the CORE complete (Week 04). The inputs are
-`syn/results/single_cycle_core_mapped.v` (3421 cells, 1022 flops) and
-`syn/results/single_cycle_core.sdf`. The P&R target module is `single_cycle_core`
-(the synthesis-ready core with memory ports; memories are external SRAM macros).
+**What you will have at the end:** a complete physical implementation of the `single_cycle_core` RV32I processor — cells placed on silicon, a balanced clock tree, all 5500+ nets routed, timing closed, and the design saved to disk.
 
----
+> This is a beginner's field guide. It is written so that someone who has never opened Innovus can, with this document and an AI assistant, reproduce the full flow and reach a routed chip. It deliberately includes the **mistakes and errors we hit**, because debugging them is where the real learning is.
 
-## Part 1: What Place and Route Is
-
-After synthesis, the design exists as a gate-level netlist: a list of standard cells connected by logical wires. There is no physical location assigned to any cell. Place and Route (P&R) converts the netlist into a physical layout by:
-
-1. Assigning each standard cell a physical location on the silicon die
-2. Connecting all cells with metal wires that obey the design rules of the process technology
-3. Building the clock distribution network to deliver the clock signal to every flip-flop with minimal skew
-
-The output of P&R is:
-- A final placed-and-routed netlist (Verilog .v)
-- A DEF (Design Exchange Format) file describing physical geometry
-- A post-route SDF file with actual wire delays (more accurate than pre-route SDF)
-- A GDS file (for tape-out -- not generated in this university flow)
+> **Confidentiality note (read this first):** The standard-cell library, LEF, Liberty, and process kit (PDK) are under a commercial/NDA license. **None of their file names, paths, cell names, layer names, or characterized numbers appear in this repository.** All such values live in a single git-ignored file, `pdk_local.tcl`. Throughout this guide we refer to them only through generic variables like `$PDK_TIMING_LIB`, `$PDK_SITE`, `$PDK_HMETAL`. When you share screenshots publicly (LinkedIn, papers), **share the layout canvas only, never the terminal** — the terminal prints the licensed paths/names.
 
 ---
 
-## Part 2: Required Inputs
+## Part 0 — The Big Picture: Where P&R Sits
 
-| Input | Source | Purpose |
-|-------|--------|---------|
-| Gate-level netlist (.v) | Genus synthesis | What cells to place |
-| LEF files (tech.lef, cells.lef) | PDK | Physical geometry of each cell |
-| Liberty file (.lib) | PDK | Timing model for each cell |
-| SDC file | syn/constraints/ | Same timing constraints as synthesis |
+```
+RTL (SystemVerilog)
+   │  Genus synthesis  (Week 04)
+   ▼
+Gate-level netlist (.v) + SDC constraints
+   │  Innovus place & route  (Week 05 — this guide)
+   ▼
+Placed + clock-treed + routed layout
+   │  outputs:
+   ├─ final netlist (.v)         → for gate-level simulation
+   ├─ DEF (.def)                 → physical geometry
+   ├─ post-route SDF (.sdf)      → real wire delays, for GLS
+   └─ saved design (.enc.dat)    → restorable database
+```
 
-**PDK (Process Design Kit):** The collection of files describing a specific semiconductor process (e.g., TSMC 28nm, GlobalFoundries 22nm). On TalTech HPC, set the PDK path:
+Synthesis answered *"which gates?"*. Place & route answers *"where does each gate sit on the silicon, and how are they wired together?"*
+
+P&R converts the netlist into a physical layout by:
+1. **Placing** each standard cell at a legal location in rows on the die.
+2. Building a **clock tree** so every flip-flop receives the clock at nearly the same time.
+3. **Routing** metal wires between all cells, obeying the manufacturing design rules.
+4. **Closing timing** using the real, extracted wire delays.
+
+---
+
+## Part 1 — The Inputs P&R Needs (and Why)
+
+P&R cannot start from RTL. It needs a synthesized netlist plus a description of the target technology. Here is every input, what it is, and why it is required.
+
+| Input | What it is | Why P&R needs it |
+|-------|-----------|------------------|
+| **Gate-level netlist** (`.v`) | The list of standard cells and how they connect, produced by synthesis | This is *what* to place and wire |
+| **Technology LEF** | Defines the metal routing layers, their preferred direction, and via rules | So the router knows what layers/wires are legal |
+| **Standard-cell LEF** | The physical shape, size, and pin locations of every cell | So the placer knows how big each cell is and where its pins are |
+| **Liberty timing library** (`.lib`) | Per-cell delay/slew/power model | So Innovus can analyze timing and optimize |
+| **SDC constraints** | Clock period, input/output delays, false paths | Defines the timing target the design must meet |
+| **Placement SITE** | The unit grid cells snap onto (named in the cell LEF) | Floorplanning aligns rows to this grid |
+
+**The crucial split for this design:** we place the **core** (`single_cycle_core`), *not* the full `single_cycle_top`. The top embeds instruction/data memories, and **memories are not standard cells** — they are large pre-made macros (or, in this academic kit, external SRAM). Innovus cannot place a memory as a logic cell. So Week 04 synthesized a logic-only core with the memories pulled out to ports, and that core (`single_cycle_core_mapped.v`) is what we place here.
+
+> **War story #1 — wrong netlist.** The original script pointed at `single_cycle_mapped.v` / `single_cycle_top`. That netlist still has memories baked in and would choke `init_design`. Fix: target `single_cycle_core_mapped.v` / `single_cycle_core`.
+
+### The confidential-PDK pattern (`pdk_local.tcl`)
+
+Because the PDK paths/names are licensed, **they are never committed**. Instead:
+
+- `pdk_local.tcl` (git-ignored) holds the real values, only on the HPC:
+  ```tcl
+  set PDK_LIB_SEARCH   <dir of your .lib>
+  set PDK_LIBERTY      <your_cell_library.lib>
+  set PDK_TIMING_LIB   <full path to your .lib>
+  set PDK_TECH_LEF     <full path to your technology LEF>
+  set PDK_CELL_LEF     <full path to your standard-cell LEF>
+  set PDK_SITE         <placement site name>
+  set PDK_PWR_PIN      <cell power pin name>
+  set PDK_GND_PIN      <cell ground pin name>
+  set PDK_HMETAL       <a horizontal-preferred top metal>
+  set PDK_VMETAL       <a vertical-preferred top metal>
+  ```
+- `pdk_local.tcl.template` (committed) shows the *shape* of this file with generic placeholders, so a new student knows what to fill in.
+- The synthesis and P&R scripts `source pdk_local.tcl` and use only the `$PDK_*` variables.
+
+**How to discover these values for your own kit** (these are the exact moves we used):
 ```bash
-export PDK_DIR=/path/to/pdk
+# Find LEF files in your PDK tree
+find <pdk_root> -name "*.lef"
+# In the technology LEF, list routing layers and their preferred direction:
+grep -iE "LAYER |TYPE |DIRECTION " <tech.lef>
+# In the cell LEF, find the placement SITE name:
+grep -i site <tech.lef> <cell.lef>
+# In the cell LEF, find the power/ground pin names:
+grep -iB2 "USE POWER"  <cell.lef> | grep -i pin | sort -u
+grep -iB2 "USE GROUND" <cell.lef> | grep -i pin | sort -u
 ```
 
 ---
 
-## Part 3: The Complete P&R Flow
+## Part 2 — The Outputs P&R Produces (and How to Read Them)
 
-### Step 1: Initialize Design
+| Output | File | What it is / how to read it |
+|--------|------|------------------------------|
+| Final netlist | `single_cycle_final.v` | The post-route netlist (now includes clock-tree buffers). Used for the final gate-level simulation (GLS). |
+| DEF | `single_cycle_final.def` | Physical geometry: cell positions, wire routes. Can be viewed or handed to later tools. |
+| Post-route SDF | `single_cycle_postroute.sdf` | Real per-net wire delays extracted after routing. Back-annotated in GLS for accurate timing simulation. |
+| Area report | `area.rpt` | Total cell area and instance count. Sanity-check it against your expectation. |
+| Timing report | `timing_postroute.rpt` | Worst paths and their **slack**. Positive slack = timing met. |
+| Saved design | `single_cycle_routed.enc` + `.enc.dat/` | A self-contained, restorable database. Reload with `restoreDesign` instead of redoing the whole flow. |
 
-Load the netlist and technology files into Innovus.
+**Reading a timing line:** `slack = required_time − arrival_time`. Required time comes from the clock period minus setup. Arrival time is the actual delay through the logic. **Positive slack = the design runs at the target clock. Negative slack = it is too slow and must be fixed.** We finished with a comfortably positive worst slack (TNS = 0, i.e. zero total violation).
+
+---
+
+## Part 3 — GUI vs Batch, and Getting the GUI to Actually Appear
+
+Innovus can run two ways:
+
+- **Batch:** `innovus -batch -files pnr/innovus_single_cycle.tcl` — runs the whole script, no window. Fast, reproducible, good once the flow is proven.
+- **GUI (interactive):** `innovus` opens a window with a layout canvas; you type commands in the **console** and *watch* each step. Best for learning and debugging.
+
+**Where do you type?** When you launch `innovus` from a terminal, **that terminal is the Tcl console** (the `innovus N>` prompt). The big GUI window is just the picture — it redraws as you run commands in the terminal. You do **not** type into the black canvas.
+
+> **War story #2 — "no window mode".** Launching `innovus` over a plain SSH session printed:
+> `**WARN: (IMPSYT-1507): The display is invalid and will start in no window mode`
+> The GUI needs a real graphical display. SSH alone has none. The fix: connect with a remote desktop (VNC), open a terminal **inside** that desktop (so `echo $DISPLAY` shows e.g. `:5`), and launch `innovus` from there. If VNC sessions pile up, list them with `vncserver -list`, kill stale ones with `vncserver -kill :N`, and start a fresh one.
+
+> **Shell gotcha (tcsh):** the HPC shell is tcsh, not bash. Things that bit us: here-docs (`<< EOF`) are finicky; a `!` inside a value (some cell power/ground pin names end in `!`) triggers history expansion; and lines beginning with `#` are *not* comments interactively. Easiest fix for multi-line files: use `nano` and paste, rather than shell here-docs.
+
+---
+
+## Part 4 — The MMMC Concept (Timing Setup) — and the Rule That Tripped Us
+
+Innovus needs timing context. It is supplied through **MMMC** (Multi-Mode Multi-Corner), which bundles:
+
+- **library_set** — which timing `.lib` (the per-cell stopwatch),
+- **rc_corner** — the wire-parasitic conditions,
+- **delay_corner** — library_set + rc_corner = one PVT corner,
+- **constraint_mode** — the SDC (clock, I/O delays),
+- **analysis_view** — one constraint_mode tied to one delay_corner,
+- and finally `set_analysis_view`, which activates it.
+
+We put all of this in a small file, **`pnr/mmmc.tcl`**:
+```tcl
+source pdk_local.tcl
+create_library_set   -name ls_typ -timing [list $PDK_TIMING_LIB]
+create_rc_corner     -name rc_typ -T 25
+create_delay_corner  -name dc_typ -library_set ls_typ -rc_corner rc_typ
+create_constraint_mode -name cm_func -sdc_files [list syn/constraints/single_cycle.sdc]
+create_analysis_view -name av_typ -constraint_mode cm_func -delay_corner dc_typ
+set_analysis_view    -setup {av_typ} -hold {av_typ}
+```
+
+> **War story #3 — `set_analysis_view` is not allowed loose.** Typing the MMMC commands directly in the console failed:
+> `**ERROR (TCLCMD-1230): set_analysis_view is called before the design is initialized and not from init_design.`
+> Innovus only allows `set_analysis_view` to run **from inside `init_design`** (via the MMMC file). So the timing setup must live in `pnr/mmmc.tcl`, which `init_design` reads.
+
+> **War story #4 — physical-only mode.** Before we understood the above, we tried `read_physical` + `read_netlist` + a loose `set_analysis_view`. Because no timing view was active when the netlist loaded, Innovus initialized in *physical-only* mode and then refused timing commands. The clean fix is the **atomic `init_design`** flow below, where LEF + netlist + MMMC are loaded together.
+
+---
+
+## Part 5 — The Step-by-Step Flow (What We Actually Ran)
+
+Everything below is run from the repo root, in the Innovus console. Each block: the command, what it does, and what to look for. `$PDK_*` values come from `pdk_local.tcl`.
+
+### Step 1 — Initialize the design (atomic load)
 
 ```tcl
-read_netlist  syn/results/single_cycle_mapped.v -top single_cycle_top
-read_lef [list $env(PDK_DIR)/lef/tech.lef $env(PDK_DIR)/lef/cells.lef]
-read_lib $env(PDK_DIR)/lib/typical.lib
-read_sdc syn/constraints/single_cycle.sdc
+source pdk_local.tcl
+set init_mmmc_file pnr/mmmc.tcl
+set init_lef_file  [list $PDK_TECH_LEF $PDK_CELL_LEF]
+set init_verilog   syn/results/single_cycle_core_mapped.v
+set init_top_cell  single_cycle_core
+set_db init_power_nets  {VDD}
+set_db init_ground_nets {VSS}
 init_design
 ```
+**Does:** loads LEF (physical), the netlist (logical), and `pnr/mmmc.tcl` (timing) in one shot, then builds the in-memory database. Because `set_analysis_view` runs from inside this, timing mode is active.
+**Watch for:** `0 error(s)`; it lists usable buffers/inverters/delay cells (proof timing libs loaded); the cell count appears (`stdCell insts`). Many `**WARN` lines about antenna/cap-table/sheet-resistance are normal for an academic kit with no parasitic-extraction data — timing becomes approximate, which is fine for learning.
 
-`init_design` cross-references the netlist cells against the LEF/LIB files. Every cell instance in the netlist must have a matching entry in the LEF/LIB.
-
-### Step 2: Floorplanning
-
-Defines the die area, the core area (where cells can be placed), and the margins.
+### Step 2 — Floorplan
 
 ```tcl
-floorPlan -site core \
-          -r 1.0 \      # aspect ratio 1.0 = square
-          -d 200.0 200.0 \   # die width and height in microns
-          -e 10.0 10.0 10.0 10.0  # core margins (left right top bottom)
+floorPlan -site $PDK_SITE -r 1.0 0.60 10 10 10 10
 ```
+**Does:** creates the die/core. `-r 1.0` = square; `0.60` = target 60% cell density (40% left for wiring); `10 10 10 10` = core-to-die margins (µm). Innovus auto-sizes the die and lays down placement **rows**.
+**See:** a rectangle with thin horizontal lines (rows). Press `f` to fit the view. Cells are not placed yet.
 
-**Utilization:** The ratio of cell area to available core area. A 70% utilization target means 30% of the core area is free for routing. Higher utilization = smaller die = harder to route. Start with 60-70% for educational flows.
-
-### Step 3: Power Planning
-
-Creates the power distribution network (PDN) that delivers VDD and VSS to every standard cell.
+### Step 3 — Power planning (PDN)
 
 ```tcl
-# Power ring around the core
-addRing -nets {VDD VSS} -type core_rings \
-        -layer {top M5 bottom M5 left M4 right M4} \
-        -width 2.0 -spacing 1.0
-
-# Power stripes across the interior
-addStripe -nets {VDD VSS} -layer M5 -direction vertical \
+globalNetConnect VDD -type pgpin -pin $PDK_PWR_PIN -inst * -override
+globalNetConnect VSS -type pgpin -pin $PDK_GND_PIN -inst * -override
+addRing  -nets {VDD VSS} -type core_rings \
+         -layer [list top $PDK_HMETAL bottom $PDK_HMETAL left $PDK_VMETAL right $PDK_VMETAL] \
+         -width 2.0 -spacing 1.0 -offset 1.0
+addStripe -nets {VDD VSS} -layer $PDK_VMETAL -direction vertical \
           -width 1.0 -spacing 0.5 -set_to_set_distance 20.0
-
-# Connect standard cell power pins to the grid
-globalNetConnect VDD -type pgpin -pin VDD -inst *
-globalNetConnect VSS -type pgpin -pin VSS -inst *
+sroute -connect {corePin} -nets {VDD VSS}
 ```
+**Does:** declares which cell pins are VDD/VSS, draws a power **ring** on the thick top metals (horizontal layer top/bottom, vertical layer left/right — matching each layer's preferred direction), drops vertical power **stripes** across the interior, and `sroute` wires the standard-cell power **rails** (one pair per row) up to the grid.
+**See:** the core fills with blue M1 power rails (one per row). The ring/stripes are on the top metals; they may be visually hidden under the dense rails until you toggle layers in the right-hand color panel.
+**Why before placement:** the power grid is the skeleton; cells are placed around it and tap the nearest rail.
 
-Why power planning matters: Standard cells have VDD and VSS pins at fixed locations. The PDN must deliver current to all cells without excessive IR drop (voltage drop due to wire resistance). Insufficient PDN causes cells near the center of the die to see lower VDD, which slows them down and causes timing violations.
-
-### Step 4: Placement
-
-Places all standard cells in legal locations within the core area.
+### Step 4 — Placement
 
 ```tcl
 setPlaceMode -timingDriven true
 place_design
-checkPlace       # verify no overlapping cells
+checkPlace
 ```
+**Does:** places every standard cell into legal row positions, prioritizing the critical path (timing-driven). `checkPlace` verifies legality.
+**Watch for:** `place_design` taking real seconds; `checkPlace` reporting `Placed = <all cells>, Unplaced = 0`. The canvas fills with thousands of tiny cells (often overlaid with an early-global-route congestion map — green/yellow/red — which is just a routability check).
 
-Timing-driven placement prioritizes cells on the critical path, placing them close together to minimize wire length and propagation delay.
+> **War story #5 — the scan-chain wall (the big one).** Placement aborted instantly with:
+> `**ERROR (IMPSP-9099): Scan chains exist in this design but are not defined for 50.10% flops.`
+> **Why:** Genus, by default, maps flip-flops to **scan flops** — flops with extra `SE/SI/SO` pins used for *manufacturing test* (DFT): after fabrication you chain all flops into one giant shift register to test the chip. Our netlist had these scan-capable flops, but we never *defined the scan chain*. Innovus sees "scan flops, no chain" and refuses to place, because guessing the order could ruin a real chip's testability.
+> **What did NOT work:** `setPlaceMode -place_global_ignore_scan true` (that only controls scan *reordering*, not this check).
+> **The fix (at synthesis):** re-synthesize telling Genus not to use scan flops —
+> ```tcl
+> set_db use_scan_seqs_for_non_dft false
+> ```
+> in `syn/single_cycle_core_syn.tcl`, then re-run `genus -f ...`. This yields plain functional flops (slightly larger, totally fine for us). After reloading, the error became a harmless `IMPSP-9025: No scan chain specified/traced` and **placement went through** (cell count rose from 3421 → 4414, exactly as expected from swapping scan flops for plain flops).
 
-After placement, a pre-CTS timing analysis shows whether the placed design can meet timing BEFORE the clock tree is built (pessimistic: assumes zero clock skew).
-
-### Step 5: Pre-CTS Optimization
-
-Fixes setup timing violations before building the clock tree.
+### Step 5 — Pre-CTS optimization
 
 ```tcl
 optDesign -preCTS
 ```
+**Does:** fixes setup-timing slow paths **now**, while the clock is still assumed ideal (cheaper here than after routing). (On a PODv2 database this runs as `place_opt_design`.)
 
-This is important because large setup violations at pre-CTS stage are cheaper to fix (by swapping cells or resizing) than at post-route stage.
-
-### Step 6: Clock Tree Synthesis (CTS)
-
-Builds the clock distribution network. The goal is to deliver the clock to every flip-flop with minimal skew (difference in clock arrival time between the earliest and latest flip-flop).
+### Step 6 — Clock Tree Synthesis (CTS)
 
 ```tcl
-create_clock_tree_spec -output pnr/results/clock_spec.ctstch
-clockDesign -specFile pnr/results/clock_spec.ctstch
+clock_opt_design
 ```
+**Does:** builds a **balanced tree of clock buffers** so every flop receives `clk` at nearly the same time (minimal **skew**), and runs post-CTS optimization (setup + hold) concurrently.
+**Watch for:** a skew/insertion-latency summary and the timing metric line (we got TNS = 0.000 ns, worst slack positive). Some `IMPCCOPT` errors at this stage are pre-route clock-net complaints (no routing exists yet) and are resolved by routing.
 
-Without CTS, if one flip-flop receives the clock 200 ps later than another, their effective setup time window is reduced by 200 ps -- a potential timing violation.
+> **War story #6 — PODv2 command names.** The older `create_clock_tree_spec` was "invalid command name", and `ccopt_design` failed with:
+> `**ERROR (IMPCCOPT-2440): The input db is PODv2. Please try clock_opt_design.`
+> The tool literally told us the fix: on the newer **PODv2** database, the clock step is `clock_opt_design`.
 
-After CTS, Innovus inserts a balanced tree of clock buffers. Check the CTS report:
-- Max clock skew (target: < 50-100 ps for modern designs)
-- Max clock latency
-- Number of clock buffers inserted
-
-### Step 7: Post-CTS Optimization (Hold Fix)
-
-After CTS, the tool knows real clock skew values. This can CREATE hold violations that did not exist before CTS (a fast flip-flop can capture data intended for the next cycle).
-
-```tcl
-optDesign -postCTS -hold
-```
-
-Hold violations are fixed by inserting delay buffers on the data path.
-
-### Step 8: Routing
-
-Routes all signal wires on the metal layers, obeying design rules (minimum spacing, minimum width, via rules).
+### Step 7 — Routing
 
 ```tcl
 routeDesign
-checkRoute    # verify no DRC violations
+checkRoute
 ```
+**Does:** the **NanoRoute** engine draws every signal wire on the lower metals (the top metals stay reserved for power), obeying all design rules. `checkRoute` verifies connectivity.
+**Watch for:** `routeDesign` ending with `0 error(s)`; `checkRoute` printing *"All <N> nets <M> terms ... are properly connected"*. We routed 5578 nets / 20193 terminals cleanly.
 
-Routing fills the remaining metal capacity after the PDN stripes and clock tree are placed. If utilization is too high, routing becomes congested and some wires cannot be placed -- this is called a routing overflow.
+> **War story #7 — router name.** `route_design` (underscore) is **not** a command here; the router is the camelCase `routeDesign`. (Innovus is inconsistent: `clock_opt_design` has an underscore, `routeDesign` is camelCase.)
 
-### Step 9: Post-Route Optimization
-
-Final timing closure with actual wire delays.
+### Step 8 — Post-route optimization
 
 ```tcl
-optDesign -postRoute        # setup fix
-optDesign -postRoute -hold  # hold fix
+optDesign -postRoute
+optDesign -postRoute -hold
 ```
+**Does:** final timing closure using the **real routed-wire delays**. The `-hold` pass is important: routing can introduce **hold** violations (data arriving too early), fixed by inserting delay buffers.
 
-### Step 10: Write Outputs
+### Step 9 — Reports
 
 ```tcl
-write_netlist -top_module_only pnr/results/single_cycle_final.v
-write_def pnr/results/single_cycle_final.def
-write_sdf pnr/results/single_cycle_postroute.sdf
+report_area > pnr/results/area.rpt
+report_timing -nworst 10 > pnr/results/timing_postroute.rpt
+report_timing -nworst 1
 ```
+**Does:** writes the final area and timing reports, and prints the worst post-route slack to the console (your sign-off number).
+
+### Step 10 — Write outputs + save the design
+
+```tcl
+saveNetlist pnr/results/single_cycle_final.v
+defOut -routing pnr/results/single_cycle_final.def
+write_sdf  pnr/results/single_cycle_postroute.sdf
+saveDesign pnr/results/single_cycle_routed.enc
+```
+**Does:** writes the final netlist, the DEF (with routing), the post-route SDF, and a full restorable database.
+**Reload later without redoing the flow:**
+```tcl
+restoreDesign pnr/results/single_cycle_routed.enc.dat single_cycle_core
+```
+
+> **War story #8 — output command options.** `write_netlist -top_module_only` and `write_def` (with options) and `report_timing -slack_lesser_than 0` were rejected on this version, so no files appeared. The robust legacy writers `saveNetlist` / `defOut` work, and `saveDesign` always produces a self-contained `.enc.dat` — so even if a single writer misbehaves, your work is preserved in the saved design.
+
+> **Never press Ctrl-C in the Innovus console** — one extra Ctrl-C exits Innovus, and the design lives only in memory until you `saveDesign`. Save early.
 
 ---
 
-## Part 4: Timing Reports After P&R
+## Part 6 — The Whole Flow as One Script
 
-Post-route timing is more accurate than post-synthesis timing because it includes actual wire delays. Run:
-
-```tcl
-report_timing -path_type full -slack_lesser_than 0 > pnr/results/timing_violations.rpt
-```
-
-If no violations: the file will be empty (all slacks are positive). If violations exist, each path shows:
-- Which cell is the startpoint and endpoint
-- Each stage of the path with cell delay and wire delay
-- The slack value
-
-Typical critical path for single_cycle_top:
-```
-regfile read → rs1_data → alu_a → ALU computation → alu_res → writeback → regfile write
-```
-
-The ALU (especially the adder and shift operations) usually dominates the critical path.
-
----
-
-## Part 5: Post-Route Gate-Level Simulation
-
-After P&R, run a final GLS with the post-route SDF to catch:
-- Wire delay effects not visible in pre-route SDF
-- Signal integrity issues from long wires
-- Hold violations introduced by routing
-
+Once proven interactively, the entire flow lives in `pnr/innovus_single_cycle.tcl` and can be run in one shot:
 ```bash
-xrun -sv pnr/results/single_cycle_final.v \
-     tb/single_cycle_smoke_tb.sv \
-     -sdf_file pnr/results/single_cycle_postroute.sdf \
-     -R -access +rwc \
-     -l artifacts/xrun_postroute_gls.log
-
-grep -i "SMOKE PASS\|fail\|timing\|violation" artifacts/xrun_postroute_gls.log
+innovus -batch -files pnr/innovus_single_cycle.tcl   # batch
+# or, in the GUI console:
+source pnr/innovus_single_cycle.tcl
 ```
+It sources `pdk_local.tcl`, reads `pnr/mmmc.tcl`, and runs Steps 1–10 above.
 
 ---
 
-## Part 6: Common P&R Issues and Fixes
+## Part 7 — Common P&R Issues and Fixes (Quick Table)
 
-### Issue: Routing congestion / routing overflow
-
-Cause: Utilization too high or cells in one region are too dense.
-Fix: Reduce target utilization (increase die area), spread cells manually, or add blockages to guide placement.
-
-### Issue: Clock skew too large
-
-Cause: Unbalanced clock tree, or clock tree spec not properly constraining skew.
-Fix: Check `create_clock_tree_spec` parameters, add clock tree exceptions for high-fanout cells.
-
-### Issue: Hold violations after CTS
-
-Cause: Expected. CTS reveals real skew which can create hold violations.
-Fix: `optDesign -postCTS -hold` inserts delay buffers. If violations remain, increase hold fix effort.
-
-### Issue: PDK not found / init_design fails
-
-Cause: PDK environment variable not set, or LEF/LIB files missing.
-Fix: Verify `$env(PDK_DIR)` points to the correct PDK directory before running Innovus.
-
-### Issue: Power pin connection error
-
-Cause: Cell power pin name in the netlist (e.g., `VDD`) does not match the PDK's power pin name.
-Fix: Update `globalNetConnect` to use the exact pin names from the PDK's LEF file.
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `IMPSYT-1507 ... no window mode` | No graphical display on the launching terminal | Launch from a VNC desktop terminal where `echo $DISPLAY` is non-empty |
+| `TCLCMD-1230 ... set_analysis_view ... not from init_design` | MMMC set up loosely in the console | Put MMMC in `pnr/mmmc.tcl`, load via `init_mmmc_file` + `init_design` |
+| Initialized in physical-only mode | Netlist loaded before any timing view | Use the atomic `init_design` flow (LEF + netlist + MMMC together) |
+| `IMPSP-9099 ... scan chains ... not defined` | Genus used scan flops, no scan chain | Re-synthesize with `set_db use_scan_seqs_for_non_dft false` |
+| `IMPCCOPT-2440 ... try clock_opt_design` | PODv2 database, old CTS command | Use `clock_opt_design` |
+| `route_design ... invalid command` | Wrong router name | Use `routeDesign` |
+| Output file not written | Common-UI writer option rejected | Use `saveNetlist` / `defOut`; always `saveDesign` |
+| Routing congestion / overflow | Utilization too high | Lower the floorplan utilization (e.g. 0.50–0.60) |
+| Hold violations after CTS/route | Real skew/wire delay revealed | `optDesign -postRoute -hold` inserts delay buffers |
 
 ---
 
-## Progress Tracker (P&R)
+## Part 8 — Interview Questions and Answers
+
+**Q1: What are the stages of place and route, and what does each produce?**
+Floorplanning defines the die/core and rows. Power planning builds the VDD/VSS distribution network (rings, stripes, rails). Placement assigns every standard cell a legal location. Clock tree synthesis builds a balanced clock-buffer tree to minimize skew. Routing connects all signal nets on the metal layers. Post-route optimization closes timing with real wire delays. Together they turn a gate-level netlist into a physical layout.
+
+**Q2: Why must memories be handled separately from the logic core in P&R?**
+Standard-cell P&R places small logic cells from the cell library. A memory is not a standard cell — it is a large pre-made macro (or external SRAM) with its own layout. So you synthesize and place the logic *core* with memory ports, and treat memories as external/macro blocks. Placing a netlist with embedded memory arrays as if they were logic cells will fail.
+
+**Q3: What is a scan flop, and why did it block placement?**
+A scan flop is a flip-flop with extra pins (`SE/SI/SO`) that let all flops be chained into one shift register for manufacturing test (DFT). If the netlist contains scan flops but no scan chain is defined, the placer refuses, because placing them without a defined order can ruin testability. For a non-DFT learning flow, disable scan flop usage at synthesis (`use_scan_seqs_for_non_dft false`).
+
+**Q4: What is clock skew and why does CTS exist?**
+Skew is the difference in clock arrival time between the earliest and latest flop. Wire RC makes the clock arrive at different times. If one flop's clock is late, data launched from another can arrive too early and corrupt it (a hold violation). CTS builds a balanced buffer tree with matched path lengths so all flops see the clock nearly simultaneously.
+
+**Q5: Setup vs hold violation?**
+Setup = data arrives **too late** (path too slow); fix by making the path faster or relaxing the clock. Hold = data arrives **too early** (path too fast) and corrupts the previous value being captured; fix by making the path slower (insert delay buffers). Routing tends to reveal hold issues, which is why a post-route hold pass matters.
+
+**Q6: Pre-route vs post-route timing — why both?**
+Pre-route timing estimates wire delays from statistical models. Post-route timing uses the actual routed geometry and extracted parasitics, so it is the real ground truth for whether the design meets its clock. A design can pass pre-route and fail post-route if real wires are longer than estimated.
+
+**Q7: Why is the power grid built before placement?**
+The PDN (rings/stripes/rails) is the skeleton that delivers current to every cell. Building it first lets the placer position cells around the grid and tap the nearest rail, and reserves the top metals for power so routing congestion on signal layers is reduced.
+
+---
+
+## Part 9 — Progress Tracker (P&R)
 
 | Task | Status |
 |------|--------|
-| pnr/innovus_single_cycle.tcl written | Done |
-| Synthesis prerequisite complete | Pending |
-| Innovus P&R run on TalTech HPC | Pending |
-| Floorplan set, power ring placed | Pending |
-| Placement complete, no overlaps | Pending |
-| CTS complete, skew report reviewed | Pending |
-| Routing complete, no DRC violations | Pending |
-| Post-route timing clean (positive slack) | Pending |
-| Post-route GLS passing | Pending |
-| Final netlist and DEF written | Pending |
+| Innovus GUI launched via VNC (display fixed) | Done |
+| pdk_local.tcl created (confidential values, git-ignored) | Done |
+| init_design: LEF + netlist + MMMC loaded, 0 errors | Done |
+| Floorplan set (utilization-based), rows created | Done |
+| Power ring + stripes + cell rails (sroute) | Done |
+| Core re-synthesized without scan flops | Done |
+| Placement complete, 0 unplaced | Done |
+| Pre-CTS optimization | Done |
+| CTS (clock_opt_design), skew/latency reviewed, TNS = 0 | Done |
+| Routing complete, all nets connected, checkRoute clean | Done |
+| Post-route optimization (setup + hold) | Done |
+| Reports + final netlist/DEF/SDF + saved design written | Done |
+| Post-route GLS (next: simulate final netlist with post-route SDF) | Next |
 
 ---
 
-## Interview Questions and Answers
+## Part 10 — Command Quick Reference (generic, copy-paste)
 
-**Q1: What are the stages of place and route and what does each produce?**
+```tcl
+# --- init (LEF + netlist + MMMC, atomic) ---
+source pdk_local.tcl
+set init_mmmc_file pnr/mmmc.tcl
+set init_lef_file  [list $PDK_TECH_LEF $PDK_CELL_LEF]
+set init_verilog   syn/results/single_cycle_core_mapped.v
+set init_top_cell  single_cycle_core
+set_db init_power_nets  {VDD}
+set_db init_ground_nets {VSS}
+init_design
+# --- floorplan ---
+floorPlan -site $PDK_SITE -r 1.0 0.60 10 10 10 10
+# --- power ---
+globalNetConnect VDD -type pgpin -pin $PDK_PWR_PIN -inst * -override
+globalNetConnect VSS -type pgpin -pin $PDK_GND_PIN -inst * -override
+addRing  -nets {VDD VSS} -type core_rings -layer [list top $PDK_HMETAL bottom $PDK_HMETAL left $PDK_VMETAL right $PDK_VMETAL] -width 2.0 -spacing 1.0 -offset 1.0
+addStripe -nets {VDD VSS} -layer $PDK_VMETAL -direction vertical -width 1.0 -spacing 0.5 -set_to_set_distance 20.0
+sroute -connect {corePin} -nets {VDD VSS}
+# --- place ---
+setPlaceMode -timingDriven true
+place_design
+checkPlace
+# --- pre-CTS opt, CTS, route, post-route opt ---
+optDesign -preCTS
+clock_opt_design
+routeDesign
+checkRoute
+optDesign -postRoute
+optDesign -postRoute -hold
+# --- reports + outputs ---
+report_area > pnr/results/area.rpt
+report_timing -nworst 10 > pnr/results/timing_postroute.rpt
+report_timing -nworst 1
+saveNetlist pnr/results/single_cycle_final.v
+defOut -routing pnr/results/single_cycle_final.def
+write_sdf  pnr/results/single_cycle_postroute.sdf
+saveDesign pnr/results/single_cycle_routed.enc
+```
 
-Floorplanning defines the die area and places macros and I/O pins. Power planning creates the VDD/VSS distribution network. Placement assigns physical locations to all standard cells. Clock tree synthesis builds a balanced clock buffer tree so all flip-flops receive the clock at nearly the same time. Routing connects all signal wires between cells using the metal layers defined in the technology LEF. Post-route optimization fixes remaining timing violations. Together these stages convert a gate-level netlist into a physical layout.
+---
 
-**Q2: What is clock skew and why does it matter?**
-
-Clock skew is the difference in arrival time of the clock signal between the earliest and latest flip-flop in the design. In an ideal design, all flip-flops receive the clock at exactly the same time. In reality, wire resistance and capacitance create delays. If flip-flop A receives the clock 200 ps after flip-flop B, then data launched by B may arrive at A before A's clock edge, creating a hold violation. CTS minimizes skew by building a balanced tree of clock buffers with matched wire lengths from the clock source to every flip-flop.
-
-**Q3: What is the difference between pre-route and post-route timing?**
-
-Pre-route timing (after placement, before routing) estimates wire delays using statistical wire-length models. Post-route timing uses actual routed wire geometries and the RC parasitics extracted from those wires, making it much more accurate. A design that meets timing pre-route may fail post-route because actual wire delays are longer than estimated. Post-route timing with the actual SDF file is the final ground truth for whether the design meets its clock frequency requirement.
-
-**Q4: What is a hold violation and how does it differ from a setup violation?**
-
-A setup violation means data arrives at a flip-flop TOO LATE -- the path is too slow, violating the setup time requirement before the clock edge. It is fixed by making the path faster: using larger cells, reducing wire length, or relaxing the clock period. A hold violation means data arrives TOO EARLY -- the path is so fast that it could corrupt the previous cycle's result still being captured by the destination flip-flop. It is fixed by making the path SLOWER, typically by inserting delay buffers.
-
-**Q5: What is the power distribution network and why does it need careful planning?**
-
-The PDN is the network of wide metal wires on upper metal layers that delivers VDD and VSS from the chip I/O pads to every standard cell's power pins. Standard cells consume current during switching. Wire resistance causes a voltage drop (IR drop) along the PDN -- cells far from the I/O pads see lower VDD. Lower VDD slows down switching, causing timing violations in cells that were otherwise meeting timing at nominal VDD. Power planning adds rings, stripes, and horizontal/vertical mesh to reduce the effective resistance and keep IR drop below 5-10% of VDD across the entire die.
-
-**Q6: Why is post-route GLS important even after pre-route GLS passed?**
-
-Pre-route GLS uses an SDF generated from synthesis with estimated wire delays. Post-route GLS uses an SDF extracted from the actual routed wires, which are longer and more capacitively loaded. Routing can introduce wire delays that were not present in the synthesis estimate, particularly on high-fanout nets that must be routed over long distances. Post-route GLS is the final confirmation that the physical implementation matches the behavioral RTL under real timing conditions. For security-critical designs, post-route GLS with the real SDF is mandatory before sign-off.
+*Generic by design: every technology-specific value is a `$PDK_*` variable from the git-ignored `pdk_local.tcl`. With this guide and that one local file filled in for your kit, a beginner can go from a synthesized netlist to a routed chip — exactly as we did.*
