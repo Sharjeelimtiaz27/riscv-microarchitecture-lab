@@ -28,7 +28,9 @@
 # Load netlist, LEF files, liberty timing model, and SDC constraints.
 # =============================================================================
 
-read_netlist  syn/results/single_cycle_mapped.v -top single_cycle_top
+# P&R target is the CORE (logic only). Memories are external SRAM macros and
+# are NOT placed by Innovus -- they connect to the core through ports.
+read_netlist  syn/results/single_cycle_core_mapped.v -top single_cycle_core
 
 read_lef [list \
     $env(PDK_DIR)/lef/tech.lef \
