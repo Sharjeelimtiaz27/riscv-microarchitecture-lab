@@ -31,8 +31,8 @@ set PDK_TIMING_LIB   "<full path to your Liberty .lib>"
 set PDK_TECH_LEF     "<full path to your technology LEF>"
 set PDK_CELL_LEF     "<full path to your standard-cell LEF>"
 set PDK_SITE         "<placement site name, found in the cell LEF (SITE ...)>"
-set PDK_PWR_PIN      "<cell power pin name, e.g. VDD or <VDD_PIN>>"
-set PDK_GND_PIN      "<cell ground pin name, e.g. VSS or <GND_PIN>>"
+set PDK_PWR_PIN      "<cell power pin name, e.g. VDD>"
+set PDK_GND_PIN      "<cell ground pin name, e.g. VSS>"
 
 # Top metals for the power distribution network. Pick one horizontal-preferred
 # routing layer and one vertical-preferred routing layer (read the tech LEF:
